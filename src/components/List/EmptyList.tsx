@@ -1,59 +1,33 @@
 import React from 'react';
 
-import {
-    View,
-    Text,
-} from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
-export default function EmptyList() {
+import { styles } from './styles';
 
+interface Props {
+    // Opcional: se passado, exibe um botão de atalho para cadastrar
+    onAdd?: () => void;
+}
+
+export default function EmptyList({ onAdd }: Props) {
     return (
+        <View style={styles.container}>
+            <View style={styles.iconCircle}>
+                <MaterialIcons name="add-location-alt" size={32} color="rgb(163, 204, 127)" />
+            </View>
 
-        <View
-            style={{
-                flex: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginTop: 80,
-            }}
-        >
-
-            <Text
-                style={{
-                    fontSize: 18,
-                    color: '#757575',
-                }}
-            >
-
-                Nenhum rastreador cadastrado.
-
+            <Text style={styles.title}>Nenhum rastreador cadastrado</Text>
+            <Text style={styles.subtitle}>
+                Cadastre um rastreador com nome e número do chip para começar a monitorar.
             </Text>
 
-            <Text
-                style={{
-                    marginTop: 10,
-                    color: '#999',
-                    textAlign: 'center',
-                }}
-            >
-
-                Toque em "Adicionar Rastreador"
-
-            </Text>
-
-            <Text
-                style={{
-                    color: '#999',
-                    textAlign: 'center',
-                }}
-            >
-
-                para começar.
-
-            </Text>
-
+            {onAdd && (
+                <TouchableOpacity style={styles.button} onPress={onAdd} activeOpacity={0.85}>
+                    <MaterialIcons name="add" size={18} color="#FFFFFF" />
+                    <Text style={styles.buttonText}>Adicionar Rastreador</Text>
+                </TouchableOpacity>
+            )}
         </View>
-
     );
-
 }

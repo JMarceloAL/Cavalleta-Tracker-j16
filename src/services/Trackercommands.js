@@ -22,10 +22,10 @@ export const TrackerCommands = {
     getParams: () => 'PARAM#',
     restart: () => 'RESET#',
 
-    // Bloqueio de óleo/energia (corte de combustível/ignição)
+    // Bloqueio de óleo/energia
     getRelayStatus: () => 'RELAY#',
-    cutRelay: () => 'RELAY,1#',
-    restoreRelay: () => 'RELAY,0#',
+    cutRelay: () => 'RELAY,1#',      // desconecta óleo/energia
+    restoreRelay: () => 'RELAY,0#',  // liga óleo/energia
 
     // Números de central (até 3)
     addCenterNumber: (slot, number) => (slot === 1 ? `CENTER,A,${number}#` : `CENTER,A${slot},${number}#`),
@@ -41,7 +41,11 @@ export const TrackerCommands = {
     enableAutoAnswer: () => '777#',
     disableAutoAnswer: () => '888#',
 
-    // Heartbeat
+    // Função da chamada recebida (monitoramento de voz vs link do Google)
+    setCallFunction: (mode) => `SZCS#CALL_FUN=${mode}#`, // 0 = voz, 1 = link Google
+    getCallFunction: () => 'CXCS#CALL_FUN',
+
+    // Heartbeat — 2 parâmetros: seg. com ACC ON, min. com ACC OFF
     setHeartbeat: (accOnSec, accOffMin) => `HBT,${accOnSec},${accOffMin}#`,
     getHeartbeat: () => 'HBT#',
 
@@ -49,8 +53,8 @@ export const TrackerCommands = {
     setReportInterval: (accOnSec, accOffSec) => `TIMER,${accOnSec},${accOffSec}#`,
     getReportInterval: () => 'TIMER#',
 
-    // Alarme de vibração
-    enableVibrationAlarm: (mode = 0) => `SENALM,ON,${mode}#`,
+    // Alarme de vibração — valores padrão como string, evita inferência "number" do TS
+    enableVibrationAlarm: (mode = '0') => `SENALM,ON,${mode}#`,
     disableVibrationAlarm: () => 'SENALM,OFF#',
     getVibrationAlarm: () => 'SENALM#',
 
@@ -60,29 +64,34 @@ export const TrackerCommands = {
     getPowerAlarm: () => 'POWERALM#',
 
     // Bateria fraca
-    enableBatteryAlarm: (mode = 0) => `BATALM,ON,${mode}#`,
+    enableBatteryAlarm: (mode = '0') => `BATALM,ON,${mode}#`,
     disableBatteryAlarm: () => 'BATALM,OFF#',
     getBatteryAlarm: () => 'BATALM#',
 
-    // Alarme de movimento (geofence por raio)
-    enableMovingAlarm: (radius, mode = 0) => `MOVING,ON,${radius},${mode}#`,
+    // Alarme de movimento
+    enableMovingAlarm: (radius, mode = '0') => `MOVING,ON,${radius},${mode}#`,
     disableMovingAlarm: () => 'MOVING,OFF#',
     getMovingAlarm: () => 'MOVING#',
 
     // Alarme de excesso de velocidade
-    enableSpeedAlarm: (durationSec, speedKmh, mode = 1) => `SPEED,ON,${durationSec},${speedKmh},${mode}#`,
+    enableSpeedAlarm: (durationSec, speedKmh, mode = '1') => `SPEED,ON,${durationSec},${speedKmh},${mode}#`,
     disableSpeedAlarm: () => 'SPEED,OFF#',
     getSpeedAlarm: () => 'SPEED#',
 
-    // Alarme de ignição ligada/desligada (ACC)
-    enableAccOnAlarm: (mode = 3) => `ACCALM,ON,${mode}#`,
+    // Alarme de ignição ligada (ACC ON)
+    enableAccOnAlarm: (mode = '3') => `ACCALM,ON,${mode}#`,
     disableAccOnAlarm: () => 'ACCALM,OFF#',
     getAccOnAlarm: () => 'ACCALM#',
-    enableAccOffAlarm: (mode = 3) => `ACCOFFALM,ON,${mode}#`,
+
+    // Alarme de ignição desligada (ACC OFF)
+    enableAccOffAlarm: (mode = '3') => `ACCOFFALM,ON,${mode}#`,
     disableAccOffAlarm: () => 'ACCOFFALM,OFF#',
     getAccOffAlarm: () => 'ACCOFFALM#',
 
-    // Fuso horário
-    setTimezone: (direction, hours, minutes = 0) => `GMT,${direction},${hours},${minutes}#`,
+    // Modo sleep
+    getSleepMode: () => 'CXCS#SLPDISCONNECT',
+
+    // Fuso horário — 3 parâmetros: direção, horas, meio-fuso (0/15/30/45)
+    setTimezone: (direction, hours, halfZoneMinutes = '0') => `GMT,${direction},${hours},${halfZoneMinutes}#`,
     getTimezone: () => 'GMT#',
 };

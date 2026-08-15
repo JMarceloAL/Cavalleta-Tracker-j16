@@ -1,32 +1,49 @@
 // src/screens/Map/index.tsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, ActivityIndicator, Text, Linking, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
 import TrackerMap from '../../components/TrackerMap';
 import TrackerDropdown from '../../components/TrackerDropdown';
 import MapControls from '../../components/MapControls';
-import { TrackerService } from '../../services/Trackerservice';
+import { useTrackerServiceProvider } from '../../contexts/TrackerServiceContext';
 import { requestSmsPermissions } from '../../services/Smsgateway';
+import {
+    fetchTrackerLocationFromApi,
+    checkTrackerOnline,
+} from '../../services/TrackerApiService';
+import { saveLastLocation, getLastLocation } from '../../services/storage/LastlocationStorage';
 import type { Tracker, TrackerLocation } from '../../types/Tracker';
 
 const STORAGE_KEY = '@cavalleta:trackers';
 
 export default function MapScreen() {
+    const route = useRoute<any>();
+    const navigation = useNavigation<any>();
+    const { getService } = useTrackerServiceProvider();
+
     const [trackers, setTrackers] = useState<Tracker[]>([]);
     const [selectedTracker, setSelectedTracker] = useState<Tracker | null>(null);
     const [location, setLocation] = useState<TrackerLocation | null>(null);
     const [loading, setLoading] = useState(true);
     const [realTimeEnabled, setRealTimeEnabled] = useState(false);
+    const [checkingRealTime, setCheckingRealTime] = useState(false);
     const [smsLoading, setSmsLoading] = useState(false);
-
-    const trackerServiceRef = useRef<TrackerService | null>(null);
 
     const loadTrackers = useCallback(async () => {
         try {
             const stored = await AsyncStorage.getItem(STORAGE_KEY);
             const list: Tracker[] = stored ? JSON.parse(stored) : [];
             setTrackers(list);
+
+            const requestedId = route.params?.trackerId;
+            if (requestedId) {
+                const requested = list.find(t => t.id === requestedId);
+                if (requested) {
+                    setSelectedTracker(requested);
+                    return;
+                }
+            }
 
             setSelectedTracker(prev => {
                 const stillExists = prev && list.find(t => t.id === prev.id);
@@ -37,7 +54,7 @@ export default function MapScreen() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [route.params?.trackerId]);
 
     useFocusEffect(
         useCallback(() => {
@@ -45,32 +62,65 @@ export default function MapScreen() {
         }, [loadTrackers])
     );
 
-    // Recria o TrackerService sempre que o rastreador selecionado muda
+    // Carrega a última localização conhecida ao trocar de rastreador
     useEffect(() => {
-        trackerServiceRef.current?.destroy();
-        trackerServiceRef.current = null;
-        setLocation(null); // limpa localização do rastreador anterior
+        setLocation(null);
+        setRealTimeEnabled(false); // desliga o tempo real ao trocar de rastreador
 
         if (selectedTracker) {
-            trackerServiceRef.current = new TrackerService(selectedTracker.phone);
+            getLastLocation(selectedTracker.id).then(last => {
+                if (last) setLocation(last);
+            });
         }
-
-        return () => {
-            trackerServiceRef.current?.destroy();
-            trackerServiceRef.current = null;
-        };
     }, [selectedTracker]);
 
-    // Polling de tempo real — liga/desliga com o switch
+    // Vem da tela de Histórico: usuário tocou numa localização específica.
+    // Sobrescreve a última localização carregada acima e desliga o tempo
+    // real, pra não ficar sobrescrevendo o ponto histórico escolhido.
     useEffect(() => {
-        if (!realTimeEnabled || !selectedTracker) return;
+        if (route.params?.historyLocation) {
+            setRealTimeEnabled(false);
+            setLocation(route.params.historyLocation as TrackerLocation);
+            navigation.setParams({ historyLocation: undefined });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [route.params?.historyLocation]);
 
-        const interval = setInterval(() => {
+    // Comando manual de SMS (botão do balão) — dispara via navegação da tela SMS
+    useEffect(() => {
+        if (route.params?.autoRequestLocation && selectedTracker) {
             handleRequestSmsLocation();
-        }, 30000);
+            navigation.setParams({ autoRequestLocation: undefined, trackerId: undefined });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedTracker, route.params?.autoRequestLocation]);
+
+    // Tempo real: SOMENTE via API, nunca dispara SMS.
+    // Se o rastreador não tiver IMEI cadastrado, o switch nem liga.
+    useEffect(() => {
+        if (!realTimeEnabled || !selectedTracker?.imei) return;
+
+        const trackerId = selectedTracker.id;
+        const imei = selectedTracker.imei;
+
+        async function pollApi() {
+            try {
+                const newLocation = await fetchTrackerLocationFromApi(imei);
+                setLocation(newLocation);
+                await saveLastLocation(trackerId, newLocation);
+            } catch (error: any) {
+                console.log('⚠️ Erro no polling da API:', error.message);
+                // silencioso — não interrompe o polling automático com Alert
+            }
+        }
+
+        pollApi(); // já busca imediatamente ao ligar, sem esperar o primeiro intervalo
+
+        // Consulta mais rápido que o próprio rastreador reporta (5s),
+        // pra reduzir a latência entre "servidor recebeu" e "app exibiu"
+        const interval = setInterval(pollApi, 2000);
 
         return () => clearInterval(interval);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [realTimeEnabled, selectedTracker]);
 
     function handleOpenExternalMap() {
@@ -80,53 +130,101 @@ export default function MapScreen() {
         }
 
         const url = `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
-        Linking.openURL(url).catch(() => {
+
+        Linking.openURL(url).catch((err) => {
+            console.log('❌ Erro ao abrir Google Maps:', err);
             Alert.alert('Erro', 'Não foi possível abrir o mapa externo.');
         });
     }
 
-    function handleShowLastLocation() {
-        if (!location) {
-            Alert.alert('Última localização', 'Nenhuma localização disponível ainda.');
+    async function handleShowLastLocation() {
+        if (!selectedTracker) {
+            Alert.alert('Aviso', 'Selecione um rastreador primeiro.');
             return;
         }
 
-        Alert.alert(
-            'Última localização',
-            `Lat: ${location.latitude}\nLng: ${location.longitude}` +
-            (location.lastUpdate ? `\nAtualizado: ${location.lastUpdate}` : '')
-        );
+        const last = await getLastLocation(selectedTracker.id);
+
+        if (!last) {
+            Alert.alert('Última localização', 'Nenhuma localização registrada ainda para este rastreador.');
+            return;
+        }
+
+        setLocation(last);
     }
 
+    // Botão de SMS — sempre manual, sob demanda, nunca em loop
     async function handleRequestSmsLocation() {
         if (!selectedTracker) {
             Alert.alert('Aviso', 'Selecione um rastreador primeiro.');
             return;
         }
 
-        if (!trackerServiceRef.current) {
-            Alert.alert('Erro', 'Serviço de rastreamento não inicializado.');
-            return;
-        }
-
         setSmsLoading(true);
         try {
             await requestSmsPermissions();
-            const reply = await trackerServiceRef.current.getLocation();
+            const service = getService(selectedTracker.phone);
+            const reply = await service.getLocation();
 
-            setLocation({
+            const newLocation: TrackerLocation = {
                 latitude: reply.latitude,
                 longitude: reply.longitude,
                 lastUpdate: reply.timestamp,
-            });
-        } catch (error) {
-            Alert.alert(
-                'Erro ao buscar localização',
-                error instanceof Error ? error.message : 'Erro desconhecido'
-            );
+            };
+
+            setLocation(newLocation);
+            await saveLastLocation(selectedTracker.id, newLocation);
+        } catch (error: any) {
+            if (error.code === 'NO_SIGNAL') {
+                Alert.alert(
+                    '📡 Sem sinal de GPS',
+                    'O rastreador não conseguiu obter sua localização. Verifique se o dispositivo está em local aberto e tente novamente em alguns instantes.'
+                );
+            } else {
+                Alert.alert(
+                    'Erro ao buscar localização',
+                    error instanceof Error ? error.message : 'Erro desconhecido'
+                );
+            }
         } finally {
             setSmsLoading(false);
         }
+    }
+
+    // Ao ligar o switch, verifica antes se o rastreador está de fato
+    // conectado ao servidor e reportando dados (GET /api/tracker/:imei).
+    // Só libera o tempo real (e o polling que o useEffect acima dispara)
+    // se a verificação confirmar online: true. Desligar é sempre imediato.
+    async function handleToggleRealTime(value: boolean) {
+        if (!value) {
+            setRealTimeEnabled(false);
+            return;
+        }
+
+        if (!selectedTracker?.imei) {
+            Alert.alert(
+                'IMEI necessário',
+                'O tempo real usa a API do servidor, que exige o IMEI do rastreador cadastrado. Edite o rastreador na tela Início e adicione o IMEI.'
+            );
+            return;
+        }
+
+        setCheckingRealTime(true);
+
+        const isOnline = await checkTrackerOnline(selectedTracker.imei);
+
+        setCheckingRealTime(false);
+
+        if (!isOnline) {
+            setRealTimeEnabled(false);
+            Alert.alert(
+                '📡 Serviço em tempo real offline',
+                'O rastreador não está conectado ao servidor no momento. Tente novamente em instantes ou use a localização por SMS.'
+            );
+            return;
+        }
+
+        setRealTimeEnabled(true);
     }
 
     return (
@@ -159,7 +257,8 @@ export default function MapScreen() {
                 onRequestSmsLocation={handleRequestSmsLocation}
                 smsLoading={smsLoading}
                 realTimeEnabled={realTimeEnabled}
-                onToggleRealTime={setRealTimeEnabled}
+                onToggleRealTime={handleToggleRealTime}
+                checkingRealTime={checkingRealTime}
             />
         </View>
     );

@@ -48,10 +48,8 @@ export default function AddTrackerModal({
 
 }: Props) {
 
-    // Nome do rastreador.
     const [name, setName] = useState(initialName);
 
-    // Número do chip.
     const [phone, setPhone] = useState(initialPhone);
 
     useEffect(() => {
@@ -59,74 +57,32 @@ export default function AddTrackerModal({
         setPhone(initialPhone);
     }, [initialName, initialPhone, visible]);
 
-    /*
-        Adiciona um novo rastreador.
-    */
     function handleAdd() {
 
         if (
-
             name.trim() === '' ||
-
             phone.trim() === ''
-
         ) {
-
-            Alert.alert(
-
-                'Aviso',
-
-                'Preencha todos os campos.'
-
-            );
-
+            Alert.alert('Aviso', 'Preencha nome e número do chip.');
             return;
-
         }
 
         if (phone.length < 10) {
-
-            Alert.alert(
-
-                'Aviso',
-
-                'Número inválido. Digite o DDD + número (ex: 61999999999).'
-
-            );
-
+            Alert.alert('Aviso', 'Número inválido. Digite o DDD + número (ex: 61999999999).');
             return;
-
         }
 
-        onAdd(
+        onAdd(name, normalizeToE164(phone));
 
-            name,
-
-            normalizeToE164(phone)
-
-        );
-
-        // Limpa os campos.
         setName('');
-
         setPhone('');
-
-        // Fecha o Modal.
         onClose();
-
     }
 
-    /*
-        Fecha o Modal e limpa os campos.
-    */
     function handleClose() {
-
         setName('');
-
         setPhone('');
-
         onClose();
-
     }
 
     function handleNameChange(value: string) {
@@ -145,86 +101,37 @@ export default function AddTrackerModal({
 
     return (
 
-        <Modal
-
-            visible={visible}
-
-            transparent
-
-            animationType="slide"
-
-        >
+        <Modal visible={visible} transparent animationType="slide">
 
             <View style={styles.overlay}>
 
                 <View style={styles.container}>
 
-                    <Text style={styles.title}>
-
-                        {title}
-
-                    </Text>
+                    <Text style={styles.title}>{title}</Text>
 
                     <TextInput
-
                         placeholder="Nome"
                         placeholderTextColor="#8E8E93"
                         value={name}
-
                         onChangeText={handleNameChange}
-
                         style={styles.input}
-
                     />
 
                     <TextInput
-
                         placeholder="Número do Chip"
                         placeholderTextColor="#8E8E93"
                         keyboardType="phone-pad"
-
                         value={phone}
-
                         onChangeText={handlePhoneChange}
-
                         style={[styles.input, styles.inputSpacing]}
-
                     />
 
-                    <TouchableOpacity
-
-                        style={styles.primaryButton}
-
-                        onPress={handleAdd}
-
-                    >
-
-                        <Text
-                            style={styles.primaryButtonText}
-                        >
-
-                            {submitLabel}
-
-                        </Text>
-
+                    <TouchableOpacity style={styles.primaryButton} onPress={handleAdd}>
+                        <Text style={styles.primaryButtonText}>{submitLabel}</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-
-                        style={styles.cancelButton}
-
-                        onPress={handleClose}
-
-                    >
-
-                        <Text
-                            style={styles.cancelButtonText}
-                        >
-
-                            Cancelar
-
-                        </Text>
-
+                    <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
+                        <Text style={styles.cancelButtonText}>Cancelar</Text>
                     </TouchableOpacity>
 
                 </View>

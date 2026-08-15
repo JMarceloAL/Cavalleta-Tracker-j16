@@ -1,54 +1,70 @@
 import { StyleSheet } from 'react-native';
 
-
 export const styles = StyleSheet.create({
-
     container: {
-
-        // Ocupa toda a tela disponível.
         flex: 1,
-
-        // Centraliza o conteúdo verticalmente.
-        justifyContent: 'center',
-
-        // Centraliza o conteúdo horizontalmente.
-        alignItems: 'center',
-
+        backgroundColor: '#F5F7F2',
     },
 
-
-    title: {
-
-        // Tamanho do texto.
-        fontSize: 24,
-
-        // Deixa o texto em negrito.
-        fontWeight: 'bold',
-
-    },
     header: {
-        width: '100%',
         paddingHorizontal: 20,
-        paddingTop: 30,
-        paddingBottom: 18,
+        paddingTop: 24,
+        paddingBottom: 16,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
     },
+
+    headerTextGroup: {
+        flex: 1,
+        marginRight: 12,
+    },
+
+    title: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#1F241C',
+        letterSpacing: -0.3,
+    },
+
+    subtitle: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#75806D',
+        letterSpacing: 0.4,
+        marginTop: 4,
+        textTransform: 'uppercase',
+    },
+
     addButton: {
-        marginHorizontal: 20,
-        marginBottom: 16,
-        borderRadius: 8,
-        backgroundColor: 'rgb(163, 204, 127)',
-        paddingVertical: 14,
+        flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: 'rgb(163, 204, 127)',
+        borderRadius: 22,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
     },
+
     addButtonText: {
-        color: '#FFF',
-        fontWeight: 'bold',
+        color: '#FFFFFF',
+        fontWeight: '700',
+        fontSize: 14,
+        marginLeft: 4,
     },
+
+    listContent: {
+        paddingHorizontal: 20,
+        paddingBottom: 24,
+        flexGrow: 1,
+    },
+
     emptyListContainer: {
         flex: 1,
         justifyContent: 'center',
     },
-})
+});

@@ -3,20 +3,34 @@
  * em objetos JS fáceis de usar na UI.
  */
 
-// Aceita tanto "<03-20 22:45>http://..." quanto só "http://..." sem prefixo
-const LOCATION_REGEX = /(?:<(\d{2}-\d{2}\s\d{2}:\d{2})>\s*)?(https?:\/\/maps\.google\.com\/maps\?q=(-?[\d.]+),(-?[\d.]+))/;
+const LOCATION_REGEX = /(?:<(\d{2}-\d{2}\s\d{2}:\d{2})>\s*)?(https?:\/\/maps\.google\.com\/maps\?q=([+-]?[\d.]+),([+-]?[\d.]+))/;
 
 const DELIVERY_REPORT_REGEX = /\b(?:torpedo entregue|sms entregue|sms delivered|sms sent|delivered|entregue|enviado)\b/i;
 const NO_SIGNAL_REGEX = /\b(?:sem sinal|no signal|gprs:offline|gps:off|sem serviço|sem rede|offline|sem linha)\b/i;
 
+// Um único regex genérico de IMEI, reutilizado em qualquer tipo de resposta
+const IMEI_REGEX = /IMEI:(\d+)/;
+
 const STATUS_REGEX = {
+    // Formato do manual (pode não bater com todos os firmwares)
     battery: /Battery:([\d.]+)V/,
     gprs: /GPRS:(\w+)/,
     gsmSignal: /GSMSignal Level:(\d+)/,
     acc: /ACC:(\w+)/,
     gps: /GPS:(\w+)/,
-    defense: /Defense:(ON|OFF)/,
-    imei: /IMEI:(\d+)/,
+    defense: /Defense:(\w+)/,
+    imei: IMEI_REGEX,
+    timer: /TIMER:([\d,]+)/,
+    hbt: /HBT:(\w+)/,
+    sneds: /SNEDS:(\d+)/,
+
+    // Formato real observado no seu firmware
+    charging: /Charging:([\d.]+)V/,
+    gprsLink: /GPRS:([\w\s]+?)(?:;|$)/,
+    signalLevel: /NW Signal Level:(\w+)/,
+    pppState: /PPP_STATE:(\d+)/,
+    gpsBd: /GPS\+BD:(\w+)/,
+    pwrmd: /PWRMD:(\d+)/,
 };
 
 export function parseTrackerReply(rawMessage) {
@@ -42,11 +56,18 @@ export function parseTrackerReply(rawMessage) {
         };
     }
 
-    if (message.includes('Battery:') && message.includes('IMEI:')) {
+    // Reconhece STATUS# tanto no formato do manual (Battery/IMEI)
+    // quanto no formato real observado (Charging/PWRMD)
+    const looksLikeStatus =
+        (message.includes('Battery:') && message.includes('IMEI:')) ||
+        message.includes('Charging:') ||
+        message.includes('PWRMD');
+
+    if (looksLikeStatus) {
         const status = { type: 'status', raw: message };
         for (const [key, regex] of Object.entries(STATUS_REGEX)) {
             const match = message.match(regex);
-            if (match) status[key] = match[1];
+            if (match) status[key] = match[1].trim();
         }
         return status;
     }
@@ -73,6 +94,13 @@ export function parseTrackerReply(rawMessage) {
 
     if (message === 'RESET OK') {
         return { type: 'reset', raw: message };
+    }
+
+    // PARAM# provavelmente retorna algo com IMEI: mas sem bater em nenhum
+    // formato acima — captura como 'params' se tiver IMEI, senão 'unknown'
+    const imeiMatch = message.match(IMEI_REGEX);
+    if (imeiMatch) {
+        return { type: 'params', imei: imeiMatch[1], raw: message };
     }
 
     return { type: 'unknown', raw: message };

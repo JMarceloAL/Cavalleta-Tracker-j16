@@ -43,7 +43,7 @@ export const styles = StyleSheet.create({
         shadowRadius: 4,
         shadowOffset: { width: 0, height: 2 },
         position: 'absolute',
-        bottom: 595,
+        bottom: 625,
         right: 345,
     },
     sms: {
@@ -59,7 +59,7 @@ export const styles = StyleSheet.create({
         shadowRadius: 4,
         shadowOffset: { width: 0, height: 2 },
         position: 'absolute',
-        bottom: 595,
+        bottom: 625,
         right: 290,
     },
     switchWrapper: {
@@ -74,8 +74,9 @@ export const styles = StyleSheet.create({
         shadowRadius: 4,
         shadowOffset: { width: 0, height: 2 },
         position: 'absolute',
-        bottom: 600,
+        bottom: 630,
         right: 10,
+
     },
     signalIcon: {
         top: 2,

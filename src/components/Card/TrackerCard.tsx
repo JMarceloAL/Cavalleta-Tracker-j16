@@ -1,117 +1,90 @@
 import React from 'react';
 
-import {
-    View,
-    Text,
-    TouchableOpacity,
-} from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 
-import { MaterialIcons } from '@expo/vector-icons';
-
-interface Tracker {
-
-    id: string;
-
-    name: string;
-
-    phone: string;
-
-}
+import type { Tracker } from '../../types/Tracker';
+import { styles } from './styles';
 
 interface Props {
-
     tracker: Tracker;
-
     onDelete(id: string): void;
-
     onLocate(id: string): void;
-
     onEdit(tracker: Tracker): void;
+}
 
+/**
+ * Formata o número pra exibição, ex: "61999999999" -> "(61) 99999-9999".
+ * Se não bater com 10/11 dígitos (formato já normalizado de forma
+ * diferente, por exemplo), mostra o valor original sem quebrar a tela.
+ */
+function formatPhone(phone: string) {
+    const digits = phone.replace(/\D/g, '');
+
+    if (digits.length === 11) {
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+
+    if (digits.length === 10) {
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+
+    return phone;
 }
 
 export default function TrackerCard({
-
     tracker,
-
     onDelete,
-
     onLocate,
-
     onEdit,
-
 }: Props) {
+    const hasImei = Boolean(tracker.imei);
 
     return (
+        <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.7}
 
-        <View
-            style={{
-                backgroundColor: '#FFF',
-                borderRadius: 10,
-                width: 250,
-                padding: 15,
-                marginBottom: 15,
-                elevation: 2,
-            }}
         >
+            <View style={styles.avatar}>
+                <Ionicons name="radio-outline" size={22} color="rgb(163, 204, 127)" />
+            </View>
 
-            <View
-                style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                }}
-            >
-
-                <Text
-                    style={{
-                        fontSize: 18,
-                        fontWeight: 'bold',
-                    }}
-                >
-
+            <View style={styles.info}>
+                <Text style={styles.name} numberOfLines={1}>
                     {tracker.name}
-
                 </Text>
 
-                <View
-                    style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                    }}
-                >
-                    <TouchableOpacity
-                        onPress={() => onEdit(tracker)}
-                        style={{ right: 10, }}
-                    >
-                        <MaterialIcons
-                            name="edit"
-                            size={24}
-                            color="rgb(163, 204, 127)"
-                        />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={() => onDelete(tracker.id)} style={{ left: 5, }}
-                    >
-                        <MaterialIcons
-                            name="delete"
-                            size={24}
-                            color="rgb(163, 204, 127)"
-                        />
-                    </TouchableOpacity>
+                <View style={styles.metaRow}>
+                    <MaterialIcons name="phone" size={12} color="#75806D" />
+                    <Text style={styles.phone}>{formatPhone(tracker.phone)}</Text>
                 </View>
+
 
             </View>
 
+            <View style={styles.actions}>
+                <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: '#EDF5E4' }]}
+                    onPress={() => onEdit(tracker)}
+                >
+                    <MaterialIcons name="edit" size={18} color="rgb(110, 148, 80)" />
+                </TouchableOpacity>
 
+                <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: '#FBEAEA' }]}
+                    onPress={() => onDelete(tracker.id)}
+                >
+                    <MaterialIcons name="delete-outline" size={18} color="#D95C5C" />
+                </TouchableOpacity>
+            </View>
 
-
-
-
-
-        </View >
-
+            <MaterialIcons
+                name="chevron-right"
+                size={20}
+                color="#C7CCC0"
+                style={styles.chevron}
+            />
+        </TouchableOpacity>
     );
-
 }

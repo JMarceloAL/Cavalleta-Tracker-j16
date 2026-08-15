@@ -64,17 +64,32 @@ export class TrackerService {
             });
         });
     }
+    /** Atalho para pedir os parâmetros (inclui IMEI) */
+    async getParams() {
+        const reply = await this.sendCommand(TrackerCommands.getParams());
+
+        if (!reply.imei) {
+            throw new Error(`Resposta não contém IMEI: ${JSON.stringify(reply)}`);
+        }
+
+        return reply;
+    }
 
     /** Atalho para pedir a localização atual */
     async getLocation() {
         const reply = await this.sendCommand(TrackerCommands.getLocationUrl());
+
         if (reply.type === 'noSignal') {
-            throw new Error(`Rastreador sem sinal: ${reply.raw}`);
+            const error = new Error('Rastreador sem sinal de GPS. Verifique se o dispositivo está em local aberto.');
+            error.code = 'NO_SIGNAL'; // <- marca o tipo do erro pra tratarmos na UI
+            throw error;
         }
+
         if (reply.type !== 'location') {
             throw new Error(`Resposta inesperada ao pedir localização: ${JSON.stringify(reply)}`);
         }
-        return reply; // { latitude, longitude, url, timestamp }
+
+        return reply;
     }
 
     /** Atalho para pedir o status atual do rastreador */

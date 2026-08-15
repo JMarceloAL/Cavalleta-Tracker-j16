@@ -54,4 +54,20 @@ export const styles = StyleSheet.create({
         color: '#D32F2F',
         fontWeight: 'bold',
     },
+    secondaryButton: {
+        borderWidth: 1,
+        borderColor: 'rgb(163, 204, 127)',
+        borderRadius: 8,
+        paddingVertical: 12,
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    secondaryButtonDisabled: {
+        opacity: 0.6,
+    },
+    secondaryButtonText: {
+        color: 'rgb(163, 204, 127)',
+        fontWeight: '600',
+        fontSize: 14,
+    },
 });
