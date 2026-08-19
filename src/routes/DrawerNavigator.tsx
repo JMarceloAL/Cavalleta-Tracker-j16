@@ -2,8 +2,9 @@
 import React from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { MaterialIcons } from '@expo/vector-icons';
-import TabNavigator from './TabNavigator';
+import TabNavigator from './TabNavigator/TabNavigator';
 import { logout } from '../services/storage/authStorage';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Drawer = createDrawerNavigator();
 
@@ -13,15 +14,20 @@ function EmptyScreen() {
 }
 
 export default function DrawerNavigator() {
+    const { isDark } = useTheme();
+
     return (
         <Drawer.Navigator
             initialRouteName="Início"
             screenOptions={{
                 headerShown: false,
                 drawerActiveTintColor: 'rgb(163, 204, 127)',
-                drawerInactiveTintColor: '#555',
+                drawerInactiveTintColor: isDark ? '#AFB9C7' : '#555',
                 drawerLabelStyle: {
                     fontSize: 16,
+                },
+                drawerStyle: {
+                    backgroundColor: isDark ? '#121821' : '#FFFFFF',
                 },
             }}
         >

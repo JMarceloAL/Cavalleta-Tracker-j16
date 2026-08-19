@@ -5,27 +5,39 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-
-import HomeScreen from '../screens/Home';
-import MapScreen from '../screens/Map';
-import SmsScreen from '../screens/SMS';
-import History from '../screens/History';
-import SettingsScreen from '../screens/Settings/index';
-import { red } from 'react-native-reanimated/lib/typescript/Colors';
+import { styles } from './styles';
+import HomeScreen from '../../screens/Home';
+import MapScreen from '../../screens/Map';
+import SmsScreen from '../../screens/SMS';
+import History from '../../screens/History';
+import SettingsScreen from '../../screens/Settings/index';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 
 export default function BottomTabs() {
     const navigation = useNavigation<any>();
+    const { isDark } = useTheme();
+
+    const headerStyle = [styles.header, isDark && styles.darkHeader];
+    const titleStyle = [styles.headerTitle, isDark && styles.darkHeaderTitle];
+    const menuColor = isDark ? '#F3F4F6' : '#000';
+    const tabBarStyle = {
+        height: 60,
+        paddingBottom: 10,
+        paddingTop: 6,
+        backgroundColor: isDark ? '#121821' : '#FFFFFF',
+        borderTopColor: isDark ? '#2E3B4D' : '#E5E7EB',
+    };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
+        <SafeAreaView style={[styles.container, isDark && styles.darkContainer]}>
+            <View style={headerStyle}>
                 {/* Abre o Drawer real do React Navigation */}
                 <TouchableOpacity style={styles.menuButton} onPress={() => navigation.openDrawer()}>
-                    <MaterialIcons name="menu" size={28} color="#000" />
+                    <MaterialIcons name="menu" size={28} color={menuColor} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Cavalleta Connect</Text>
+                <Text style={titleStyle}>Cavalleta Connect</Text>
             </View>
 
             <View style={styles.tabContainer}>
@@ -33,12 +45,8 @@ export default function BottomTabs() {
                     screenOptions={{
                         headerShown: false,
                         tabBarActiveTintColor: 'rgb(163, 204, 127)',
-                        tabBarInactiveTintColor: '#757575',
-                        tabBarStyle: {
-                            height: 60,
-                            paddingBottom: 10,
-                            paddingTop: 6,
-                        },
+                        tabBarInactiveTintColor: isDark ? '#AFB9C7' : '#757575',
+                        tabBarStyle,
                     }}
                 >
                     <Tab.Screen
@@ -100,10 +108,3 @@ export default function BottomTabs() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1 },
-    header: { height: 50, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, backgroundColor: 'white' },
-    menuButton: { marginRight: 10, },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', },
-    tabContainer: { flex: 1 }
-});

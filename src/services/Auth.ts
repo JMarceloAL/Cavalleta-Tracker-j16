@@ -1,13 +1,6 @@
 // Serviço responsável pela autenticação.
 
-// Serviço responsável por salvar a sessão.
-import { saveSession } from './storage/authStorage';
-
-// Usuário fixo.
-const USERNAME = 'root';
-
-// Senha fixa.
-const PASSWORD = 'root';
+import { getCredentials, saveSession } from './storage/authStorage';
 
 /*
     Realiza a autenticação do usuário.
@@ -19,34 +12,23 @@ const PASSWORD = 'root';
     false -> Login inválido.
 */
 export async function login(
-
     username: string,
-
     password: string
-
 ): Promise<boolean> {
+    const cleanedUsername = username.trim();
+    const cleanedPassword = password.trim();
 
-    // Remove espaços em branco.
-    username = username.trim();
+    const stored = await getCredentials();
+    const expectedUsername = stored.username || 'root';
+    const expectedPassword = stored.password || 'root';
 
-    password = password.trim();
-
-    // Verifica usuário e senha.
     if (
-
-        username === USERNAME &&
-
-        password === PASSWORD
-
+        cleanedUsername === expectedUsername &&
+        cleanedPassword === expectedPassword
     ) {
-
-        // Salva a sessão.
         await saveSession();
-
         return true;
-
     }
 
     return false;
-
 }

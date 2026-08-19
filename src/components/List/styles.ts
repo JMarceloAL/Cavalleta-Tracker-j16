@@ -8,6 +8,9 @@ export const styles = StyleSheet.create({
         marginTop: 60,
         paddingHorizontal: 40,
     },
+    darkContainer: {
+        backgroundColor: '#121821',
+    },
 
     iconCircle: {
         width: 72,
@@ -18,12 +21,18 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 20,
     },
+    darkIconCircle: {
+        backgroundColor: '#243041',
+    },
 
     title: {
         fontSize: 17,
         fontWeight: '700',
         color: '#1F241C',
         textAlign: 'center',
+    },
+    darkTitle: {
+        color: '#F3F4F6',
     },
 
     subtitle: {
@@ -32,6 +41,9 @@ export const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 8,
         lineHeight: 19,
+    },
+    darkSubtitle: {
+        color: '#AFB9C7',
     },
 
     button: {

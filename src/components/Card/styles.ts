@@ -11,6 +11,10 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E6EAE0',
     },
+    darkCard: {
+        backgroundColor: '#1D2733',
+        borderColor: '#334155',
+    },
 
     avatar: {
         width: 46,
@@ -21,6 +25,9 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 14,
     },
+    darkAvatar: {
+        backgroundColor: '#243041',
+    },
 
     info: {
         flex: 1,
@@ -30,6 +37,9 @@ export const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         color: '#1F241C',
+    },
+    darkName: {
+        color: '#F3F4F6',
     },
 
     metaRow: {
@@ -42,6 +52,9 @@ export const styles = StyleSheet.create({
         fontSize: 13,
         color: '#75806D',
         marginLeft: 4,
+    },
+    darkPhone: {
+        color: '#AFB9C7',
     },
 
     statusRow: {
@@ -76,6 +89,12 @@ export const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginLeft: 6,
+    },
+    darkEditButton: {
+        backgroundColor: '#243041',
+    },
+    darkDeleteButton: {
+        backgroundColor: '#3A2A2A',
     },
 
     chevron: {

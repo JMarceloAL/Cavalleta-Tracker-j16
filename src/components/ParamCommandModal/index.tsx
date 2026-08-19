@@ -1,8 +1,9 @@
 // src/components/ParamCommandModal/index.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, Modal, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, Alert } from 'react-native';
 
 import { styles } from './styles';
+import { useTheme } from '../../contexts/ThemeContext';
 
 
 export type Field = {
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export default function ParamCommandModal({ visible, title, fields, onClose, onSubmit }: Props) {
+    const { isDark } = useTheme();
     const [values, setValues] = useState<Record<string, string>>({});
 
     useEffect(() => {
@@ -48,21 +50,26 @@ export default function ParamCommandModal({ visible, title, fields, onClose, onS
         onSubmit(values);
     }
 
+    const containerStyle = [styles.container, isDark && styles.darkContainer];
+    const titleStyle = [styles.title, isDark && styles.darkTitle];
+    const inputStyle = [styles.input, isDark && styles.darkInput];
+    const cancelTextStyle = [styles.cancelButtonText, isDark && styles.darkCancelButtonText];
+
     return (
         <Modal visible={visible} transparent animationType="slide">
             <View style={styles.overlay}>
-                <View style={styles.container}>
-                    <Text style={styles.title}>{title}</Text>
+                <View style={containerStyle}>
+                    <Text style={titleStyle}>{title}</Text>
 
                     {fields.map(field => (
                         <TextInput
                             key={field.key}
                             placeholder={field.label + (field.optional ? ' (opcional)' : '') + (field.placeholder ? ` — ${field.placeholder}` : '')}
-                            placeholderTextColor="#8E8E93"
+                            placeholderTextColor={isDark ? '#AFB9C7' : '#8E8E93'}
                             keyboardType={field.keyboardType ?? 'default'}
                             value={values[field.key] ?? ''}
                             onChangeText={(text) => handleChange(field.key, text)}
-                            style={styles.input}
+                            style={inputStyle}
                         />
                     ))}
 
@@ -71,7 +78,7 @@ export default function ParamCommandModal({ visible, title, fields, onClose, onS
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                        <Text style={styles.cancelButtonText}>Cancelar</Text>
+                        <Text style={cancelTextStyle}>Cancelar</Text>
                     </TouchableOpacity>
                 </View>
             </View>

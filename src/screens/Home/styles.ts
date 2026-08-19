@@ -5,6 +5,9 @@ export const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F5F7F2',
     },
+    darkContainer: {
+        backgroundColor: '#121821',
+    },
 
     header: {
         paddingHorizontal: 20,
@@ -13,6 +16,9 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
+    },
+    darkHeader: {
+        backgroundColor: '#121821',
     },
 
     headerTextGroup: {
@@ -26,6 +32,9 @@ export const styles = StyleSheet.create({
         color: '#1F241C',
         letterSpacing: -0.3,
     },
+    darkTitle: {
+        color: '#F3F4F6',
+    },
 
     subtitle: {
         fontSize: 12,
@@ -34,6 +43,9 @@ export const styles = StyleSheet.create({
         letterSpacing: 0.4,
         marginTop: 4,
         textTransform: 'uppercase',
+    },
+    darkSubtitle: {
+        color: '#AFB9C7',
     },
 
     addButton: {

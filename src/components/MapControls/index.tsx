@@ -17,6 +17,7 @@ type Props = {
     // true enquanto o app verifica no servidor se o rastreador está
     // online antes de ligar o tempo real de fato (GET /api/tracker/:imei)
     checkingRealTime?: boolean;
+    realTimeDisabled?: boolean;
 };
 
 export default function MapControls({
@@ -27,6 +28,7 @@ export default function MapControls({
     realTimeEnabled,
     onToggleRealTime,
     checkingRealTime = false,
+    realTimeDisabled = false,
 }: Props) {
     return (
         <View style={styles.container}>
@@ -43,7 +45,7 @@ export default function MapControls({
                     style={styles.switch}
                     value={realTimeEnabled}
                     onValueChange={onToggleRealTime}
-                    disabled={checkingRealTime}
+                    disabled={checkingRealTime || realTimeDisabled}
                 />
             </View>
 

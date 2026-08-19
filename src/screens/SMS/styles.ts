@@ -6,6 +6,9 @@ export const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F5F7F2',
     },
+    darkContainer: {
+        backgroundColor: '#121821',
+    },
 
     header: {
         paddingHorizontal: 20,
@@ -31,21 +34,23 @@ export const styles = StyleSheet.create({
 
     scrollContent: {
         padding: 20,
-        paddingTop: 76, // espaço pro TrackerDropdown flutuante
+        paddingTop: 76,
         paddingBottom: 40,
     },
 
     list: {
         gap: 8,
-        alignItems: 'flex-start',
+        alignItems: 'stretch',
     },
 
     listButton: {
         backgroundColor: 'rgb(163, 204, 127)',
         borderRadius: 10,
-        paddingVertical: 12,
+        paddingVertical: 14,
         paddingHorizontal: 16,
-        alignSelf: 'flex-start',
+        alignSelf: 'stretch',
+        alignItems: 'center',
+        justifyContent: 'center',
         elevation: 1,
         shadowColor: '#000',
         shadowOpacity: 0.08,
@@ -61,6 +66,7 @@ export const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontWeight: '700',
         fontSize: 14,
+        textAlign: 'center',
     },
 
     responseBox: {
@@ -70,6 +76,10 @@ export const styles = StyleSheet.create({
         marginBottom: 8,
         borderWidth: 1,
         borderColor: '#E6EAE0',
+    },
+    darkResponseBox: {
+        backgroundColor: '#1D2733',
+        borderColor: '#334155',
     },
 
     responseHeader: {
@@ -84,10 +94,16 @@ export const styles = StyleSheet.create({
         color: '#75806D',
         marginLeft: 6,
     },
+    darkResponseCommand: {
+        color: '#AFB9C7',
+    },
 
     responseText: {
         fontSize: 14,
         color: '#1F241C',
         lineHeight: 20,
+    },
+    darkResponseText: {
+        color: '#F3F4F6',
     },
 });

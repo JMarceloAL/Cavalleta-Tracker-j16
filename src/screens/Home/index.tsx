@@ -8,6 +8,8 @@ import {
     View,
 } from 'react-native';
 
+import { TrackerService } from '../../services/Trackerservice';
+
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -18,6 +20,7 @@ import EmptyList from '../../components/List/EmptyList';
 import { styles } from './styles';
 import type { Tracker } from '../../types/Tracker';
 import { useTrackerServiceProvider } from '../../contexts/TrackerServiceContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { requestSmsPermissions } from '../../services/Smsgateway';
 import { detectImeiInBackground } from '../../services/ImeiDetection';
 
@@ -28,6 +31,7 @@ interface Props {
 const STORAGE_KEY = '@cavalleta:trackers';
 
 export default function Home({ navigation }: Props) {
+    const { isDark } = useTheme();
     const [trackers, setTrackers] = useState<Tracker[]>([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [editingTracker, setEditingTracker] = useState<Tracker | null>(null);
@@ -84,25 +88,41 @@ export default function Home({ navigation }: Props) {
     }
 
     async function handleAddTracker(name: string, phone: string) {
-        const newTracker: Tracker = {
-            id: String(Date.now()),
-            name,
-            phone,
-        };
+        try {
+            await requestSmsPermissions();
 
-        await saveTrackers([newTracker, ...trackers]);
+            const service = new TrackerService(phone, { timeoutMs: 60000 });
+            const imei = await detectImeiInBackground(service, (detectedImei) => {
+                // A lista só é atualizada quando o IMEI for confirmado.
+                // A persistência final acontece abaixo, após a validação.
+                console.log('🔗 IMEI confirmado para cadastro:', detectedImei);
+            }, 60000);
 
-        // Detecção de IMEI em segundo plano — não bloqueia o cadastro
-        requestSmsPermissions()
-            .then(() => {
-                const service = getService(phone);
-                detectImeiInBackground(service, (imei) => {
-                    updateTrackerImei(newTracker.id, imei);
-                });
-            })
-            .catch((error) => {
-                console.log('⚠️ Permissão de SMS negada, IMEI não será detectado:', error.message);
-            });
+            service.destroy();
+
+            if (!imei) {
+                Alert.alert(
+                    'Não foi possível conectar ao rastreador',
+                    'Não recebemos o retorno do comando PARAM# em 1 minuto. Verifique o número do chip e tente novamente.'
+                );
+                return;
+            }
+
+            const newTracker: Tracker = {
+                id: String(Date.now()),
+                name,
+                phone,
+                imei,
+            };
+
+            await saveTrackers([newTracker, ...trackers]);
+        } catch (error: any) {
+            console.log('⚠️ Permissão de SMS negada, IMEI não será detectado:', error.message);
+            Alert.alert(
+                'Não foi possível conectar ao rastreador',
+                'Não foi possível obter o IMEI do rastreador. Verifique o número do chip e tente novamente.'
+            );
+        }
     }
 
     async function handleEditTracker(id: string, name: string, phone: string) {
@@ -170,12 +190,16 @@ export default function Home({ navigation }: Props) {
         );
     }
 
+    const containerStyle = [styles.container, isDark && styles.darkContainer];
+    const titleStyle = [styles.title, isDark && styles.darkTitle];
+    const subtitleStyle = [styles.subtitle, isDark && styles.darkSubtitle];
+
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
+        <View style={containerStyle}>
+            <View style={[styles.header, isDark && styles.darkHeader]}>
                 <View style={styles.headerTextGroup}>
-                    <Text style={styles.title}>Meus Rastreadores</Text>
-                    <Text style={styles.subtitle}>
+                    <Text style={titleStyle}>Meus Rastreadores</Text>
+                    <Text style={subtitleStyle}>
                         {trackers.length === 0
                             ? 'Nenhum cadastrado'
                             : `${trackers.length} ${trackers.length === 1 ? 'cadastrado' : 'cadastrados'}`}
@@ -218,6 +242,7 @@ export default function Home({ navigation }: Props) {
                 initialPhone={editingTracker?.phone ?? ''}
                 title={editingTracker ? 'Editar Rastreador' : 'Novo Rastreador'}
                 submitLabel={editingTracker ? 'Salvar' : 'Adicionar'}
+                allowPhoneEdit={!editingTracker}
             />
         </View>
     );

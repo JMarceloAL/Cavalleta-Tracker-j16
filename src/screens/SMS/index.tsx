@@ -15,6 +15,7 @@ import TrackerDropdown from '../../components/TrackerDropdown';
 import ParamCommandModal from '../../components/ParamCommandModal';
 import CollapsibleSection from '../../components/CollapsibleSection';
 import { useTrackerServiceProvider } from '../../contexts/TrackerServiceContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { requestSmsPermissions } from '../../services/Smsgateway';
 import { STATUS_COMMANDS, PARAM_COMMANDS } from '../../services/CommandCatalog';
 import type { StatusCommand, ParamCommand } from '../../services/CommandCatalog';
@@ -26,6 +27,7 @@ const STORAGE_KEY = '@cavalleta:trackers';
 export default function SmsScreen() {
     const navigation = useNavigation<any>();
     const { getService } = useTrackerServiceProvider();
+    const { isDark } = useTheme();
 
     const [trackers, setTrackers] = useState<Tracker[]>([]);
     const [selectedTracker, setSelectedTracker] = useState<Tracker | null>(null);
@@ -138,8 +140,13 @@ export default function SmsScreen() {
         executeCommand(commandString, activeParamCommand.id);
     }
 
+    const containerStyle = [styles.container, isDark && styles.darkContainer];
+    const responseBoxStyle = [styles.responseBox, isDark && styles.darkResponseBox];
+    const responseCommandStyle = [styles.responseCommand, isDark && styles.darkResponseCommand];
+    const responseTextStyle = [styles.responseText, isDark && styles.darkResponseText];
+
     return (
-        <View style={styles.container}>
+        <View style={containerStyle}>
 
             <TrackerDropdown
                 trackers={trackers}
@@ -149,12 +156,12 @@ export default function SmsScreen() {
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {response && (
-                    <View style={styles.responseBox}>
+                    <View style={responseBoxStyle}>
                         <View style={styles.responseHeader}>
                             <MaterialIcons name="check-circle" size={16} color="rgb(110, 148, 80)" />
-                            <Text style={styles.responseCommand}>Comando: {response.command}</Text>
+                            <Text style={responseCommandStyle}>Comando: {response.command}</Text>
                         </View>
-                        <Text style={styles.responseText}>{response.text}</Text>
+                        <Text style={responseTextStyle}>{response.text}</Text>
                     </View>
                 )}
 

@@ -7,10 +7,12 @@ import {
     TextInput,
     TouchableOpacity,
     Alert,
+    ActivityIndicator,
 } from 'react-native';
 
 import { styles } from './styles';
 import { normalizeToE164 } from '../../../utils/phone';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface Props {
 
@@ -18,7 +20,7 @@ interface Props {
 
     onClose(): void;
 
-    onAdd(name: string, phone: string): void;
+    onAdd(name: string, phone: string): Promise<void> | void;
 
     initialName?: string;
 
@@ -27,6 +29,8 @@ interface Props {
     title?: string;
 
     submitLabel?: string;
+
+    allowPhoneEdit?: boolean;
 
 }
 
@@ -46,37 +50,48 @@ export default function AddTrackerModal({
 
     submitLabel = 'Adicionar',
 
+    allowPhoneEdit = true,
+
 }: Props) {
 
+    const { isDark } = useTheme();
     const [name, setName] = useState(initialName);
-
     const [phone, setPhone] = useState(initialPhone);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         setName(initialName);
         setPhone(initialPhone);
     }, [initialName, initialPhone, visible]);
 
-    function handleAdd() {
+    async function handleAdd() {
+        if (loading) return;
 
-        if (
-            name.trim() === '' ||
-            phone.trim() === ''
-        ) {
-            Alert.alert('Aviso', 'Preencha nome e número do chip.');
+        if (name.trim() === '') {
+            Alert.alert('Aviso', 'Preencha o nome do rastreador.');
             return;
         }
 
-        if (phone.length < 10) {
+        const valueToSave = allowPhoneEdit ? phone : initialPhone;
+
+        if (allowPhoneEdit && (phone.trim() === '' || phone.length < 10)) {
             Alert.alert('Aviso', 'Número inválido. Digite o DDD + número (ex: 61999999999).');
             return;
         }
 
-        onAdd(name, normalizeToE164(phone));
-
-        setName('');
-        setPhone('');
-        onClose();
+        try {
+            setLoading(true);
+            await onAdd(name, allowPhoneEdit ? normalizeToE164(phone) : normalizeToE164(valueToSave));
+        } catch (error: any) {
+            Alert.alert(
+                'Erro ao adicionar rastreador',
+                error instanceof Error ? error.message : 'Erro desconhecido'
+            );
+        } finally {
+            setLoading(false);
+            setName('');
+            setPhone('');
+        }
     }
 
     function handleClose() {
@@ -99,41 +114,71 @@ export default function AddTrackerModal({
         }
     }
 
+    const containerStyle = [styles.container, isDark && styles.darkContainer];
+    const titleStyle = [styles.title, isDark && styles.darkTitle];
+    const inputStyle = [styles.input, styles.inputSpacing, isDark && styles.darkInput];
+    const cancelTextStyle = [styles.cancelButtonText, isDark && styles.darkCancelButtonText];
+
     return (
 
         <Modal visible={visible} transparent animationType="slide">
 
             <View style={styles.overlay}>
 
-                <View style={styles.container}>
+                <View style={containerStyle}>
+                    {loading ? (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="large" color={isDark ? '#F3F4F6' : 'rgb(163, 204, 127)'} />
+                            <Text style={[styles.loadingText, isDark && styles.darkLoadingText]}>
+                                Conectando ao rastreador...
+                            </Text>
+                        </View>
+                    ) : (
+                        <>
+                            <Text style={titleStyle}>{title}</Text>
 
-                    <Text style={styles.title}>{title}</Text>
+                            <TextInput
+                                placeholder="Nome"
+                                placeholderTextColor={isDark ? '#AFB9C7' : '#8E8E93'}
+                                value={name}
+                                onChangeText={handleNameChange}
+                                style={inputStyle}
+                                editable={!loading}
+                            />
 
-                    <TextInput
-                        placeholder="Nome"
-                        placeholderTextColor="#8E8E93"
-                        value={name}
-                        onChangeText={handleNameChange}
-                        style={styles.input}
-                    />
+                            {allowPhoneEdit && (
+                                <TextInput
+                                    placeholder="Ex: 11912345678"
+                                    placeholderTextColor={isDark ? '#AFB9C7' : '#8E8E93'}
+                                    keyboardType="phone-pad"
+                                    value={phone}
+                                    onChangeText={handlePhoneChange}
+                                    maxLength={11}
+                                    style={[inputStyle, styles.inputSpacing]}
+                                    editable={!loading}
+                                />
+                            )}
 
-                    <TextInput
-                        placeholder="Número do Chip"
-                        placeholderTextColor="#8E8E93"
-                        keyboardType="phone-pad"
-                        value={phone}
-                        onChangeText={handlePhoneChange}
-                        style={[styles.input, styles.inputSpacing]}
-                    />
+                            {!allowPhoneEdit && (
+                                <View style={[inputStyle, styles.inputSpacing, { opacity: 0.9 }]}>
+                                    <Text style={{
+                                        color: isDark ? '#AFB9C7' : '#6B7280',
+                                        fontSize: 15,
+                                    }}>
+                                        {initialPhone || 'Número do chip não disponível'}
+                                    </Text>
+                                </View>
+                            )}
 
-                    <TouchableOpacity style={styles.primaryButton} onPress={handleAdd}>
-                        <Text style={styles.primaryButtonText}>{submitLabel}</Text>
-                    </TouchableOpacity>
+                            <TouchableOpacity style={styles.primaryButton} onPress={handleAdd} disabled={loading}>
+                                <Text style={styles.primaryButtonText}>{submitLabel}</Text>
+                            </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
-                        <Text style={styles.cancelButtonText}>Cancelar</Text>
-                    </TouchableOpacity>
-
+                            <TouchableOpacity style={styles.cancelButton} onPress={handleClose} disabled={loading}>
+                                <Text style={cancelTextStyle}>Cancelar</Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
                 </View>
 
             </View>

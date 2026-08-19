@@ -13,10 +13,17 @@ export const styles = StyleSheet.create({
         borderRadius: 10,
         padding: 20,
     },
+    darkContainer: {
+        backgroundColor: '#1D2733',
+    },
     title: {
         fontSize: 22,
         fontWeight: 'bold',
         marginBottom: 20,
+        color: '#111',
+    },
+    darkTitle: {
+        color: '#F3F4F6',
     },
     input: {
         borderWidth: 1,
@@ -25,13 +32,14 @@ export const styles = StyleSheet.create({
         paddingHorizontal: 12,
         height: 45,
         marginBottom: 15,
-
-
-
+        color: '#111827',
+        backgroundColor: '#FFFFFF',
     },
-
-
-
+    darkInput: {
+        borderColor: '#334155',
+        backgroundColor: '#18212d',
+        color: '#F3F4F6',
+    },
     inputSpacing: {
         marginBottom: 20,
     },
@@ -54,6 +62,9 @@ export const styles = StyleSheet.create({
         color: '#D32F2F',
         fontWeight: 'bold',
     },
+    darkCancelButtonText: {
+        color: '#FCA5A5',
+    },
     secondaryButton: {
         borderWidth: 1,
         borderColor: 'rgb(163, 204, 127)',
@@ -69,5 +80,21 @@ export const styles = StyleSheet.create({
         color: 'rgb(163, 204, 127)',
         fontWeight: '600',
         fontSize: 14,
+    },
+    loadingContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 220,
+        paddingVertical: 20,
+    },
+    loadingText: {
+        marginTop: 14,
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#1F241C',
+        textAlign: 'center',
+    },
+    darkLoadingText: {
+        color: '#F3F4F6',
     },
 });

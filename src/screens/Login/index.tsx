@@ -14,11 +14,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 
 // Importa os estilos.
 import { styles } from './styles';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Serviço responsável pela autenticação.
 import { login } from '../../services/Auth';
 
 export default function Login({ navigation }: any) {
+    const { isDark } = useTheme();
 
     /*
         Armazena o usuário digitado.
@@ -61,17 +63,24 @@ export default function Login({ navigation }: any) {
 
     }
 
+    const containerStyle = [styles.container, isDark && styles.darkContainer];
+    const titleStyle = [styles.title, isDark && styles.darkTitle];
+    const subtitleStyle = [styles.subtitle, isDark && styles.darkSubtitle];
+    const inputStyle = [styles.input, isDark && styles.darkInput];
+    const inputContainerStyle = [styles.inputContainer, isDark && styles.darkInputContainer];
+    const inputWithIconStyle = [styles.inputWithIcon, isDark && styles.darkInputText];
+
     return (
 
-        <View style={styles.container}>
+        <View style={containerStyle}>
 
-            <Text style={styles.title}>
+            <Text style={titleStyle}>
 
                 Cavalleta Connect
 
             </Text>
 
-            <Text style={styles.subtitle}>
+            <Text style={subtitleStyle}>
 
                 Sistema de Rastreamento J16
 
@@ -79,31 +88,31 @@ export default function Login({ navigation }: any) {
 
             <TextInput
 
-                style={styles.input}
+                style={inputStyle}
 
                 placeholder="Usuário"
 
                 autoCapitalize="none"
 
                 value={username}
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor={isDark ? '#AFB9C7' : '#8E8E93'}
 
                 onChangeText={setUsername}
 
             />
 
-            <View style={styles.inputContainer}>
+            <View style={inputContainerStyle}>
                 <MaterialIcons
                     name="lock-outline"
                     size={22}
-                    color="#8E8E93"
+                    color={isDark ? '#AFB9C7' : '#8E8E93'}
                     style={styles.inputIcon}
                 />
 
                 <TextInput
-                    style={styles.inputWithIcon}
+                    style={inputWithIconStyle}
                     placeholder="Senha"
-                    placeholderTextColor="#8E8E93"
+                    placeholderTextColor={isDark ? '#AFB9C7' : '#8E8E93'}
                     secureTextEntry
                     value={password}
                     onChangeText={setPassword}

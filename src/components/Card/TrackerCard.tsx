@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 
 import type { Tracker } from '../../types/Tracker';
+import { useTheme } from '../../contexts/ThemeContext';
 import { styles } from './styles';
 
 interface Props {
@@ -38,26 +39,27 @@ export default function TrackerCard({
     onLocate,
     onEdit,
 }: Props) {
+    const { isDark } = useTheme();
     const hasImei = Boolean(tracker.imei);
 
     return (
         <TouchableOpacity
-            style={styles.card}
+            style={[styles.card, isDark && styles.darkCard]}
             activeOpacity={0.7}
 
         >
-            <View style={styles.avatar}>
+            <View style={[styles.avatar, isDark && styles.darkAvatar]}>
                 <Ionicons name="radio-outline" size={22} color="rgb(163, 204, 127)" />
             </View>
 
             <View style={styles.info}>
-                <Text style={styles.name} numberOfLines={1}>
+                <Text style={[styles.name, isDark && styles.darkName]} numberOfLines={1}>
                     {tracker.name}
                 </Text>
 
                 <View style={styles.metaRow}>
-                    <MaterialIcons name="phone" size={12} color="#75806D" />
-                    <Text style={styles.phone}>{formatPhone(tracker.phone)}</Text>
+                    <MaterialIcons name="phone" size={12} color={isDark ? '#AFB9C7' : '#75806D'} />
+                    <Text style={[styles.phone, isDark && styles.darkPhone]}>{formatPhone(tracker.phone)}</Text>
                 </View>
 
 
@@ -65,14 +67,14 @@ export default function TrackerCard({
 
             <View style={styles.actions}>
                 <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#EDF5E4' }]}
+                    style={[styles.actionButton, isDark ? styles.darkEditButton : { backgroundColor: '#EDF5E4' }]}
                     onPress={() => onEdit(tracker)}
                 >
-                    <MaterialIcons name="edit" size={18} color="rgb(110, 148, 80)" />
+                    <MaterialIcons name="edit" size={18} color={isDark ? '#A7F3D0' : 'rgb(110, 148, 80)'} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#FBEAEA' }]}
+                    style={[styles.actionButton, isDark ? styles.darkDeleteButton : { backgroundColor: '#FBEAEA' }]}
                     onPress={() => onDelete(tracker.id)}
                 >
                     <MaterialIcons name="delete-outline" size={18} color="#D95C5C" />
@@ -82,7 +84,7 @@ export default function TrackerCard({
             <MaterialIcons
                 name="chevron-right"
                 size={20}
-                color="#C7CCC0"
+                color={isDark ? '#AFB9C7' : '#C7CCC0'}
                 style={styles.chevron}
             />
         </TouchableOpacity>
