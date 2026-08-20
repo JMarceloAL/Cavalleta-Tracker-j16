@@ -21,7 +21,7 @@ import ScreenTransitionOverlay from '../../components/ScreenTransitionOverlay';
 // Telas.
 import Login from '../../screens/Login';
 
-import DrawerNavigator from '../DrawerNavigator';
+import DrawerNavigator from '../DrawerNavigator/DrawerNavigator';
 
 // Serviço responsável por verificar se existe uma sessão salva.
 import { getSession } from '../../services/storage/authStorage';

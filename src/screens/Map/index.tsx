@@ -1,5 +1,5 @@
 // src/screens/Map/index.tsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, ActivityIndicator, Text, Linking, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
@@ -8,39 +8,30 @@ import TrackerDropdown from '../../components/TrackerDropdown';
 import MapControls from '../../components/MapControls';
 import { useTrackerServiceProvider } from '../../contexts/TrackerServiceContext';
 import { useRealTime } from '../../contexts/RealTimeContext';
-import { useTheme } from '../../contexts/ThemeContext';
 import { requestSmsPermissions } from '../../services/Smsgateway';
 import {
     fetchTrackerLocationFromApi,
-    checkRealtimeAvailability,
+    checkTrackerOnline,
 } from '../../services/TrackerApiService';
 import {
     saveLastLocation,
     getLastLocation,
     saveStoppedLocation,
-    getStoppedLocation,
 } from '../../services/storage/LastlocationStorage';
-import { distanceInMeters } from '../../utils/geo';
-import { sendMovementNotification } from '../../services/NotificationService';
 import type { Tracker, TrackerLocation } from '../../types/Tracker';
 
 const STORAGE_KEY = '@cavalleta:trackers';
-
-// Distância mínima (em metros) pra considerar que o rastreador saiu do
-// lugar onde estava parado. Ajuste aqui se estiver disparando falsos
-// positivos (imprecisão de GPS) ou demorando demais pra notificar.
-const MOVEMENT_THRESHOLD_METERS = 30;
-
-// Intervalo entre notificações repetidas enquanto o rastreador continuar
-// em movimento (a primeira notificação sempre dispara na hora).
-const NOTIFICATION_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
 
 export default function MapScreen() {
     const route = useRoute<any>();
     const navigation = useNavigation<any>();
     const { getService } = useTrackerServiceProvider();
-    const { setRealTimeEnabled: setGlobalRealTimeEnabled, vigilanteEnabled } = useRealTime();
-    const { isDark, colors } = useTheme();
+    const {
+        setRealTimeEnabled: setGlobalRealTimeEnabled,
+        realTimeEnabled: globalRealTimeEnabled,
+        latestLocation,
+        activeTrackerId,
+    } = useRealTime();
 
     const [trackers, setTrackers] = useState<Tracker[]>([]);
     const [selectedTracker, setSelectedTracker] = useState<Tracker | null>(null);
@@ -49,10 +40,6 @@ export default function MapScreen() {
     const [realTimeEnabled, setRealTimeEnabled] = useState(false);
     const [checkingRealTime, setCheckingRealTime] = useState(false);
     const [smsLoading, setSmsLoading] = useState(false);
-
-    // Estado do Modo Vigilante: não precisa causar re-render, então fica em refs.
-    const isMovingRef = useRef(false);
-    const lastNotifiedAtRef = useRef<number | null>(null);
 
     const loadTrackers = useCallback(async () => {
         try {
@@ -86,14 +73,17 @@ export default function MapScreen() {
         }, [loadTrackers])
     );
 
-    // Carrega a última localização conhecida ao trocar de rastreador,
-    // e reseta tanto o tempo real quanto o estado interno do Vigilante.
+    // Carrega a última localização conhecida ao trocar de rastreador
     useEffect(() => {
         setLocation(null);
         setRealTimeEnabled(false);
-        setGlobalRealTimeEnabled(false);
-        isMovingRef.current = false;
-        lastNotifiedAtRef.current = null;
+
+        // Só desliga o tempo real global se o rastreador selecionado for
+        // diferente do que está ativo no Context (evita desligar sem querer
+        // ao só re-selecionar o mesmo rastreador que já está monitorando).
+        if (selectedTracker?.id !== activeTrackerId) {
+            setGlobalRealTimeEnabled(false);
+        }
 
         if (selectedTracker) {
             getLastLocation(selectedTracker.id).then(last => {
@@ -103,7 +93,16 @@ export default function MapScreen() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedTracker]);
 
-    // Vem da tela de Histórico: usuário tocou numa localização específica.
+    // Sincroniza a location exibida com o que o Context está recebendo em background,
+    // só quando o rastreador selecionado na tela é o mesmo que está sendo monitorado.
+    useEffect(() => {
+        if (globalRealTimeEnabled && latestLocation && selectedTracker?.id === activeTrackerId) {
+            setLocation(latestLocation);
+            setRealTimeEnabled(true);
+        }
+    }, [latestLocation, globalRealTimeEnabled, activeTrackerId, selectedTracker]);
+
+    // Vem da tela de Histórico
     useEffect(() => {
         if (route.params?.historyLocation) {
             setRealTimeEnabled(false);
@@ -114,7 +113,7 @@ export default function MapScreen() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [route.params?.historyLocation]);
 
-    // Comando manual de SMS (botão do balão) — dispara via navegação da tela SMS
+    // Comando manual de SMS (botão do balão)
     useEffect(() => {
         if (route.params?.autoRequestLocation && selectedTracker) {
             handleRequestSmsLocation();
@@ -122,75 +121,6 @@ export default function MapScreen() {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedTracker, route.params?.autoRequestLocation]);
-
-    // Tempo real: SOMENTE via API. Também roda a lógica do Modo Vigilante,
-    // já que é aqui que as novas posições chegam.
-    useEffect(() => {
-        if (!realTimeEnabled || !selectedTracker?.imei) return;
-
-        const trackerId = selectedTracker.id;
-        const trackerName = selectedTracker.name;
-        const imei = selectedTracker.imei;
-
-        async function checkVigilante(newLocation: TrackerLocation) {
-            if (!vigilanteEnabled) return;
-
-            const referenceLocation = await getStoppedLocation(trackerId);
-            if (!referenceLocation) return; // ainda não há uma posição "parada" de referência
-
-            const distance = distanceInMeters(
-                referenceLocation.latitude,
-                referenceLocation.longitude,
-                newLocation.latitude,
-                newLocation.longitude
-            );
-
-            const isMoving = distance > MOVEMENT_THRESHOLD_METERS;
-
-            if (isMoving) {
-                const now = Date.now();
-                const elapsed = now - (lastNotifiedAtRef.current ?? 0);
-
-                // Notifica na hora ao detectar movimento pela primeira vez,
-                // depois repete a cada 5 minutos enquanto continuar em movimento.
-                if (!isMovingRef.current || elapsed >= NOTIFICATION_INTERVAL_MS) {
-                    await sendMovementNotification(trackerName);
-                    lastNotifiedAtRef.current = now;
-                }
-
-                isMovingRef.current = true;
-            } else {
-                isMovingRef.current = false;
-            }
-        }
-
-        async function pollApi() {
-            try {
-                const newLocation = await fetchTrackerLocationFromApi(imei);
-                setLocation(newLocation);
-                await saveLastLocation(trackerId, newLocation);
-
-                const isStopped = typeof newLocation.speed === 'number' ? newLocation.speed <= 2 : false;
-                if (isStopped) {
-                    await saveStoppedLocation(trackerId, newLocation);
-                }
-
-                await checkVigilante(newLocation);
-            } catch (error: any) {
-                console.log('⚠️ Erro no polling da API:', error.message);
-                // silencioso — não interrompe o polling automático com Alert
-            }
-        }
-
-        pollApi(); // já busca imediatamente ao ligar, sem esperar o primeiro intervalo
-
-        // Consulta mais rápido que o próprio rastreador reporta (5s),
-        // pra reduzir a latência entre "servidor recebeu" e "app exibiu"
-        const interval = setInterval(pollApi, 2000);
-
-        return () => clearInterval(interval);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [realTimeEnabled, selectedTracker, vigilanteEnabled]);
 
     function handleOpenExternalMap() {
         if (!location) {
@@ -222,7 +152,6 @@ export default function MapScreen() {
         setLocation(last);
     }
 
-    // Botão de SMS — sempre manual, sob demanda, nunca em loop
     async function handleRequestSmsLocation() {
         if (!selectedTracker) {
             Alert.alert('Aviso', 'Selecione um rastreador primeiro.');
@@ -264,12 +193,6 @@ export default function MapScreen() {
         }
     }
 
-    // Ao ligar o switch, verifica os três cenários possíveis antes de
-    // liberar o tempo real:
-    //  - não conseguiu conectar ao servidor  -> alerta + switch continua off
-    //  - conectou, mas não há localização    -> alerta + switch continua off
-    //  - conectou e há localização válida    -> exibe na hora + liga o switch
-    // Desligar é sempre imediato, sem checagem.
     async function handleToggleRealTime(value: boolean) {
         if (!value) {
             setRealTimeEnabled(false);
@@ -287,56 +210,65 @@ export default function MapScreen() {
 
         setCheckingRealTime(true);
 
-        const result = await checkRealtimeAvailability(selectedTracker.imei);
+        try {
+            const isApiReachable = await checkTrackerOnline(selectedTracker.imei);
 
-        setCheckingRealTime(false);
+            if (!isApiReachable) {
+                setRealTimeEnabled(false);
+                Alert.alert(
+                    '📡 Sem conexão com o servidor',
+                    'Não foi possível acessar a API do rastreador. Verifique a conexão do servidor e tente novamente.'
+                );
+                return;
+            }
 
-        if (result.status === 'no-connection') {
+            const currentLocation = await fetchTrackerLocationFromApi(selectedTracker.imei);
+
+            if (!currentLocation || !Number.isFinite(currentLocation.latitude) || !Number.isFinite(currentLocation.longitude)) {
+                setRealTimeEnabled(false);
+                Alert.alert(
+                    '📍 Ainda não há rastreio',
+                    'A API está respondendo, mas o rastreador ainda não enviou uma localização válida.'
+                );
+                return;
+            }
+
+            setLocation(currentLocation);
+            await saveLastLocation(selectedTracker.id, currentLocation);
+            setRealTimeEnabled(true);
+            setGlobalRealTimeEnabled(true, selectedTracker.id, selectedTracker.name, selectedTracker.imei);
+        } catch (error: any) {
             setRealTimeEnabled(false);
-            setGlobalRealTimeEnabled(false);
-            Alert.alert(
-                '📡 Não foi possível conectar',
-                'Não foi possível estabelecer conexão com o servidor. Verifique sua internet ou tente novamente em instantes.'
-            );
-            return;
-        }
 
-        if (result.status === 'no-location') {
-            setRealTimeEnabled(false);
-            setGlobalRealTimeEnabled(false);
-            Alert.alert(
-                '📍 Sem localização disponível',
-                'O servidor está online, mas este rastreador ainda não enviou nenhuma localização.'
-            );
-            return;
-        }
+            const message = error?.message?.toLowerCase?.() ?? '';
+            if (message.includes('failed to fetch') || message.includes('network') || message.includes('offline')) {
+                Alert.alert(
+                    '📡 Sem conexão com o servidor',
+                    'Não foi possível conectar à API do rastreador. Verifique a internet ou o servidor.'
+                );
+                return;
+            }
 
-        // result.status === 'available'
-        setLocation(result.location);
-        await saveLastLocation(selectedTracker.id, result.location);
-        setRealTimeEnabled(true);
-        setGlobalRealTimeEnabled(true, selectedTracker.name);
+            Alert.alert(
+                '📍 Ainda não há rastreio',
+                'A API está respondendo, mas o rastreador ainda não enviou uma localização válida.'
+            );
+        } finally {
+            setCheckingRealTime(false);
+        }
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1 }}>
             {loading ? (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-                    <ActivityIndicator color={isDark ? colors.text : undefined} />
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <ActivityIndicator />
                 </View>
             ) : location ? (
                 <TrackerMap location={location} />
             ) : (
-                <View
-                    style={{
-                        flex: 1,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        padding: 24,
-                        backgroundColor: colors.background,
-                    }}
-                >
-                    <Text style={{ textAlign: 'center', color: colors.text }}>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                    <Text style={{ textAlign: 'center' }}>
                         {selectedTracker
                             ? 'Nenhuma localização recebida ainda. Toque no ícone de SMS para solicitar.'
                             : 'Nenhum rastreador cadastrado.'}

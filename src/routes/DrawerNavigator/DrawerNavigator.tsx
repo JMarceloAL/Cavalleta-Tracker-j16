@@ -2,9 +2,9 @@
 import React from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { MaterialIcons } from '@expo/vector-icons';
-import TabNavigator from './TabNavigator/TabNavigator';
-import { logout } from '../services/storage/authStorage';
-import { useTheme } from '../contexts/ThemeContext';
+import TabNavigator from '../TabNavigator/TabNavigator';
+import { logout } from '../../services/storage/authStorage';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const Drawer = createDrawerNavigator();
 
@@ -63,6 +63,24 @@ export default function DrawerNavigator() {
                 options={{
                     drawerIcon: ({ color, size }) => (
                         <MaterialIcons name="settings" color={color} size={size} />
+                    ),
+                }}
+            />
+
+            {/* ITEM: INFO */}
+            <Drawer.Screen
+                name="Info"
+                component={TabNavigator}
+                listeners={({ navigation }) => ({
+                    drawerItemPress: (e) => {
+                        e.preventDefault();
+                        navigation.closeDrawer();
+                        navigation.navigate('Início', { screen: 'InfoScreen' });
+                    },
+                })}
+                options={{
+                    drawerIcon: ({ color, size }) => (
+                        <MaterialIcons name="info-outline" color={color} size={size} />
                     ),
                 }}
             />

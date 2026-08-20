@@ -2,7 +2,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { styles } from './styles';
@@ -11,9 +11,26 @@ import MapScreen from '../../screens/Map';
 import SmsScreen from '../../screens/SMS';
 import History from '../../screens/History';
 import SettingsScreen from '../../screens/Settings/index';
+import InfoScreen from '../../screens/Info';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const Tab = createBottomTabNavigator();
+
+// Substitui o botão padrão da tab bar (que no Android usa o efeito de
+// ripple/ondulação nativo) por um Pressable simples: só um leve fade de
+// opacidade ao tocar, sem ripple, sem highlight de cor.
+function TabBarButton(props: any) {
+    return (
+        <Pressable
+            {...props}
+            android_ripple={null}
+            style={({ pressed }) => [
+                props.style,
+                { opacity: pressed ? 0.5 : 1 },
+            ]}
+        />
+    );
+}
 
 export default function BottomTabs() {
     const navigation = useNavigation<any>();
@@ -47,6 +64,7 @@ export default function BottomTabs() {
                         tabBarActiveTintColor: 'rgb(163, 204, 127)',
                         tabBarInactiveTintColor: isDark ? '#AFB9C7' : '#757575',
                         tabBarStyle,
+                        tabBarButton: (props) => <TabBarButton {...props} />,
                     }}
                 >
                     <Tab.Screen
@@ -102,9 +120,18 @@ export default function BottomTabs() {
                             tabBarItemStyle: { position: 'absolute', display: 'none' },
                         }}
                     />
+
+                    {/* TELA INFO: Oculta visualmente e sem ocupar espaço, acessada pelo Drawer */}
+                    <Tab.Screen
+                        name="InfoScreen"
+                        component={InfoScreen}
+                        options={{
+                            tabBarButton: () => null,
+                            tabBarItemStyle: { position: 'absolute', display: 'none' },
+                        }}
+                    />
                 </Tab.Navigator>
             </View>
         </SafeAreaView>
     );
 }
-

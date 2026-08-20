@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["ExpoSmsNativeModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.smsnative.ExpoSmsNativeModule"]
+  }
+}

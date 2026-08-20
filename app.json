@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Cavalleta-Connect-j16",
-    "slug": "Cavalleta-Connect-j16",
+    "slug": "cavalleta-tracker-j16",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -39,6 +39,12 @@
           "imageWidth": 200
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e5873b75-ea34-46b1-aaf5-12b28b34ffe7"
+      }
+    },
+    "owner": "jmarceloal"
   }
 }
