@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Cavalleta-Connect-j16",
+    "name": "CAVA TJ16",
     "slug": "cavalleta-tracker-j16",
-    "version": "1.0.0",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -37,6 +37,14 @@
           "image": "./assets/splash-icon.png",
           "backgroundColor": "#FFFFFF",
           "imageWidth": 200
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ],

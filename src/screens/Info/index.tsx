@@ -62,7 +62,7 @@ export default function InfoScreen() {
                     <MaterialIcons name="info-outline" size={32} color="rgb(163, 204, 127)" />
                 </View>
 
-                <Text style={titleStyle}>Cavalleta Connect</Text>
+                <Text style={titleStyle}>Cavalleta Tracker</Text>
                 <Text style={taglineStyle}>Monitoramento de rastreadores veiculares</Text>
 
                 {/* Sobre o projeto */}

@@ -8,6 +8,7 @@ import {
     TextInput,
     TouchableOpacity,
     Alert,
+    ActivityIndicator,
 } from 'react-native';
 
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,6 +19,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 // Serviço responsável pela autenticação.
 import { login } from '../../services/Auth';
+
+// Permissões pedidas logo após o login.
+import { requestSmsPermissions } from '../../services/Smsgateway';
+import { requestNotificationPermissions } from '../../services/NotificationService';
 
 export default function Login({ navigation }: any) {
     const { isDark } = useTheme();
@@ -33,34 +38,51 @@ export default function Login({ navigation }: any) {
     const [password, setPassword] = useState('');
 
     /*
+        Controla o estado de carregamento durante login + permissões.
+    */
+    const [loading, setLoading] = useState(false);
+
+    /*
+        Pede as permissões de SMS e notificação, uma de cada vez.
+        Não bloqueia o acesso ao app se o usuário negar — só avisa.
+    */
+    async function requestAppPermissions() {
+        try {
+            await requestSmsPermissions();
+        } catch (error) {
+            console.log('⚠️ Permissão de SMS não concedida:', error);
+        }
+
+        try {
+            const granted = await requestNotificationPermissions();
+            if (!granted) {
+                console.log('⚠️ Permissão de notificação não concedida.');
+            }
+        } catch (error) {
+            console.log('⚠️ Erro ao pedir permissão de notificação:', error);
+        }
+    }
+
+    /*
         Realiza o login.
     */
     async function handleLogin() {
+        setLoading(true);
 
-        const success = await login(
+        try {
+            const success = await login(username, password);
 
-            username,
+            if (!success) {
+                Alert.alert('Erro', 'Usuário ou senha inválidos.');
+                return;
+            }
 
-            password
-
-        );
-
-        if (success) {
+            await requestAppPermissions();
 
             navigation.replace('Home');
-
-            return;
-
+        } finally {
+            setLoading(false);
         }
-
-        Alert.alert(
-
-            'Erro',
-
-            'Usuário ou senha inválidos.'
-
-        );
-
     }
 
     const containerStyle = [styles.container, isDark && styles.darkContainer];
@@ -76,7 +98,7 @@ export default function Login({ navigation }: any) {
 
             <Text style={titleStyle}>
 
-                Cavalleta Connect
+                Cavalleta Tracker
 
             </Text>
 
@@ -99,6 +121,8 @@ export default function Login({ navigation }: any) {
 
                 onChangeText={setUsername}
 
+                editable={!loading}
+
             />
 
             <View style={inputContainerStyle}>
@@ -116,6 +140,7 @@ export default function Login({ navigation }: any) {
                     secureTextEntry
                     value={password}
                     onChangeText={setPassword}
+                    editable={!loading}
                 />
             </View>
 
@@ -125,13 +150,19 @@ export default function Login({ navigation }: any) {
 
                 onPress={handleLogin}
 
+                disabled={loading}
+
             >
 
-                <Text style={styles.buttonText}>
+                {loading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                    <Text style={styles.buttonText}>
 
-                    Entrar
+                        Entrar
 
-                </Text>
+                    </Text>
+                )}
 
             </TouchableOpacity>
 
