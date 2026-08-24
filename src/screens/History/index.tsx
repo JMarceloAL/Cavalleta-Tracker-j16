@@ -1,5 +1,5 @@
-// src/screens/History/index.tsx
 import React, { useCallback, useState } from 'react';
+
 import {
     View,
     Text,
@@ -7,24 +7,123 @@ import {
     FlatList,
     ActivityIndicator,
 } from 'react-native';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { useFocusEffect } from '@react-navigation/native';
+
 import { MaterialIcons } from '@expo/vector-icons';
 
 import { getLocationHistory } from '../../services/storage/LastlocationStorage';
-import type { Tracker, TrackerLocation } from '../../types/Tracker';
+
+import {
+    getRoutes,
+    type TrackerRoute,
+} from '../../services/storage/RouteHistoryStorage';
+
+import type {
+    Tracker,
+    TrackerLocation,
+} from '../../types/Tracker';
+
 import { useTheme } from '../../contexts/ThemeContext';
+
 import { styles } from './styles';
 
 const STORAGE_KEY = '@cavalleta:trackers';
 
+type TabKey = 'locations' | 'routes';
+
 export default function History({ navigation }: any) {
+
+    // ============================================================
+    // TEMA
+    // ============================================================
+
     const { isDark } = useTheme();
-    const [trackers, setTrackers] = useState<Tracker[]>([]);
-    const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [selectedTracker, setSelectedTracker] = useState<Tracker | null>(null);
-    const [history, setHistory] = useState<TrackerLocation[]>([]);
-    const [loadingHistory, setLoadingHistory] = useState(false);
+
+    // ============================================================
+    // ESTADOS
+    // ============================================================
+
+    const [trackers, setTrackers] =
+        useState<Tracker[]>([]);
+
+    const [dropdownOpen, setDropdownOpen] =
+        useState(false);
+
+    const [selectedTracker, setSelectedTracker] =
+        useState<Tracker | null>(null);
+
+    const [activeTab, setActiveTab] =
+        useState<TabKey>('locations');
+
+    const [history, setHistory] =
+        useState<TrackerLocation[]>([]);
+
+    const [routes, setRoutes] =
+        useState<TrackerRoute[]>([]);
+
+    const [loadingData, setLoadingData] =
+        useState(false);
+
+    // ============================================================
+    // ESTILOS DINÂMICOS
+    // ============================================================
+
+    const containerStyle = [
+        styles.container,
+        isDark && styles.darkContainer,
+    ];
+
+    const titleStyle = [
+        styles.title,
+        isDark && styles.darkTitle,
+    ];
+
+    const dropdownHeaderStyle = [
+        styles.dropdownHeader,
+        isDark && styles.darkDropdownHeader,
+    ];
+
+    const dropdownHeaderTextStyle = [
+        styles.dropdownHeaderText,
+        isDark && styles.darkDropdownHeaderText,
+    ];
+
+    const chevronStyle = [
+        styles.chevron,
+        isDark && styles.darkChevron,
+    ];
+
+    const dropdownListStyle = [
+        styles.dropdownList,
+        isDark && styles.darkDropdownList,
+    ];
+
+    const emptyTextStyle = [
+        styles.emptyText,
+        isDark && styles.darkEmptyText,
+    ];
+
+    const folderStyle = [
+        styles.folder,
+        isDark && styles.darkFolder,
+    ];
+
+    const folderHeaderStyle = [
+        styles.folderHeader,
+        isDark && styles.darkFolderHeader,
+    ];
+
+    const folderHeaderTextStyle = [
+        styles.folderHeaderText,
+        isDark && styles.darkFolderHeaderText,
+    ];
+
+    // ============================================================
+    // CARREGA RASTREADORES
+    // ============================================================
 
     useFocusEffect(
         useCallback(() => {
@@ -34,154 +133,701 @@ export default function History({ navigation }: any) {
 
     async function loadTrackers() {
         try {
-            const stored = await AsyncStorage.getItem(STORAGE_KEY);
-            const list: Tracker[] = stored ? JSON.parse(stored) : [];
+            const stored =
+                await AsyncStorage.getItem(STORAGE_KEY);
+
+            const list: Tracker[] =
+                stored
+                    ? JSON.parse(stored)
+                    : [];
+
             setTrackers(list);
         } catch (error) {
-            console.warn('Erro ao carregar rastreadores', error);
+            console.warn(
+                'Erro ao carregar rastreadores',
+                error
+            );
         }
     }
 
-    async function handleSelectTracker(tracker: Tracker) {
+    // ============================================================
+    // SELECIONAR RASTREADOR
+    // ============================================================
+
+    async function handleSelectTracker(
+        tracker: Tracker
+    ) {
         setSelectedTracker(tracker);
+
         setDropdownOpen(false);
-        setLoadingHistory(true);
+
+        setLoadingData(true);
 
         try {
-            const result = await getLocationHistory(tracker.id);
-            setHistory(result);
+            const [
+                locationResult,
+                routesResult,
+            ] = await Promise.all([
+                getLocationHistory(tracker.id),
+                getRoutes(tracker.id),
+            ]);
+
+            setHistory(locationResult);
+
+            setRoutes(routesResult);
         } finally {
-            setLoadingHistory(false);
+            setLoadingData(false);
         }
     }
 
-    function handleSelectLocation(location: TrackerLocation) {
-        if (!selectedTracker) return;
+    // ============================================================
+    // ABRIR LOCALIZAÇÃO NO MAPA
+    // ============================================================
 
-        // Manda pra tela de Mapa (aba irmã) já com a localização escolhida
-        navigation.navigate('MapScreen', {
-            trackerId: selectedTracker.id,
-            historyLocation: location,
-        });
+    function handleSelectLocation(
+        location: TrackerLocation
+    ) {
+        if (!selectedTracker) {
+            return;
+        }
+
+        navigation.navigate(
+            'MapScreen',
+            {
+                trackerId:
+                    selectedTracker.id,
+
+                historyLocation:
+                    location,
+            }
+        );
     }
+
+    // ============================================================
+    // ABRIR ROTA NO MAPA
+    // ============================================================
+
+    function handleSelectRoute(
+        trackerRoute: TrackerRoute
+    ) {
+        if (!selectedTracker) {
+            return;
+        }
+
+        navigation.navigate(
+            'MapScreen',
+            {
+                trackerId:
+                    selectedTracker.id,
+
+                routePoints:
+                    trackerRoute.points,
+            }
+        );
+    }
+
+    // ============================================================
+    // DATA
+    // ============================================================
 
     function formatDate(value?: string) {
-        if (!value) return 'Data não disponível';
 
-        const date = new Date(value);
-        if (isNaN(date.getTime())) return value;
+        if (!value) {
+            return 'Data não disponível';
+        }
 
-        return date.toLocaleString('pt-BR');
+        const date =
+            new Date(value);
+
+        if (isNaN(date.getTime())) {
+            return value;
+        }
+
+        return date.toLocaleString(
+            'pt-BR'
+        );
     }
 
-    const containerStyle = [styles.container, isDark && styles.darkContainer];
-    const dropdownHeaderStyle = [styles.dropdownHeader, isDark && styles.darkDropdownHeader];
-    const dropdownHeaderTextStyle = [styles.dropdownHeaderText, isDark && styles.darkDropdownHeaderText];
-    const chevronStyle = [styles.chevron, isDark && styles.darkChevron];
-    const dropdownListStyle = [styles.dropdownList, isDark && styles.darkDropdownList];
-    const dropdownItemStyle = [styles.dropdownItem, isDark && styles.darkDropdownItem];
-    const dropdownItemTextStyle = [styles.dropdownItemText, isDark && styles.darkDropdownItemText];
-    const dropdownItemSubtextStyle = [styles.dropdownItemSubtext, isDark && styles.darkDropdownItemSubtext];
-    const emptyTextStyle = [styles.emptyText, isDark && styles.darkEmptyText];
-    const folderStyle = [styles.folder, isDark && styles.darkFolder];
-    const folderHeaderStyle = [styles.folderHeader, isDark && styles.darkFolderHeader];
-    const folderHeaderTextStyle = [styles.folderHeaderText, isDark && styles.darkFolderHeaderText];
-    const historyItemStyle = [styles.historyItem, isDark && styles.darkHistoryItem];
-    const historyItemTitleStyle = [styles.historyItemTitle, isDark && styles.darkHistoryItemTitle];
-    const historyItemCoordsStyle = [styles.historyItemCoords, isDark && styles.darkHistoryItemCoords];
-    const historyItemDateStyle = [styles.historyItemDate, isDark && styles.darkHistoryItemDate];
+    // ============================================================
+    // DISTÂNCIA
+    // ============================================================
+
+    function formatDistance(
+        km: number
+    ) {
+        return `${km
+            .toFixed(2)
+            .replace('.', ',')} km`;
+    }
+
+    // ============================================================
+    // RENDER
+    // ============================================================
 
     return (
         <View style={containerStyle}>
 
+            {/* ================================================== */}
+            {/* TÍTULO */}
+            {/* ================================================== */}
 
-            {/* Dropdown de seleção de rastreador */}
+            <Text style={titleStyle}>
+                Histórico
+            </Text>
+
+            {/* ================================================== */}
+            {/* DROPDOWN */}
+            {/* ================================================== */}
+
             <View style={styles.dropdownContainer}>
+
                 <TouchableOpacity
                     style={dropdownHeaderStyle}
-                    onPress={() => setDropdownOpen(prev => !prev)}
+                    onPress={() =>
+                        setDropdownOpen(
+                            prev => !prev
+                        )
+                    }
                 >
-                    <Text style={dropdownHeaderTextStyle} numberOfLines={1}>
-                        {selectedTracker ? selectedTracker.name : 'Selecione um rastreador'}
+
+                    <Text
+                        style={
+                            dropdownHeaderTextStyle
+                        }
+                        numberOfLines={1}
+                    >
+                        {selectedTracker
+                            ? selectedTracker.name
+                            : 'Selecione um rastreador'}
                     </Text>
-                    <Text style={chevronStyle}>{dropdownOpen ? '▲' : '▼'}</Text>
+
+                    <Text
+                        style={chevronStyle}
+                    >
+                        {dropdownOpen
+                            ? '▲'
+                            : '▼'}
+                    </Text>
+
                 </TouchableOpacity>
 
                 {dropdownOpen && (
-                    <View style={dropdownListStyle}>
+
+                    <View
+                        style={
+                            dropdownListStyle
+                        }
+                    >
+
                         <FlatList
                             data={trackers}
-                            keyExtractor={item => item.id}
-                            style={{ maxHeight: 220 }}
-                            ListEmptyComponent={
-                                <Text style={emptyTextStyle}>Nenhum rastreador cadastrado.</Text>
+                            keyExtractor={
+                                item => item.id
                             }
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={dropdownItemStyle}
-                                    onPress={() => handleSelectTracker(item)}
+                            style={{
+                                maxHeight: 220,
+                            }}
+                            ListEmptyComponent={
+
+                                <Text
+                                    style={
+                                        emptyTextStyle
+                                    }
                                 >
-                                    <Text style={dropdownItemTextStyle}>{item.name}</Text>
-                                    <Text style={dropdownItemSubtextStyle}>{item.phone}</Text>
+                                    Nenhum rastreador
+                                    cadastrado.
+                                </Text>
+
+                            }
+                            renderItem={({
+                                item,
+                            }) => (
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.dropdownItem,
+                                        isDark &&
+                                        styles.darkDropdownItem,
+                                    ]}
+                                    onPress={() =>
+                                        handleSelectTracker(
+                                            item
+                                        )
+                                    }
+                                >
+
+                                    <Text
+                                        style={[
+                                            styles.dropdownItemText,
+                                            isDark &&
+                                            styles.darkDropdownItemText,
+                                        ]}
+                                    >
+                                        {item.name}
+                                    </Text>
+
+                                    <Text
+                                        style={[
+                                            styles.dropdownItemSubtext,
+                                            isDark &&
+                                            styles.darkDropdownItemSubtext,
+                                        ]}
+                                    >
+                                        {item.phone}
+                                    </Text>
+
                                 </TouchableOpacity>
+
                             )}
                         />
+
                     </View>
+
                 )}
+
             </View>
 
-            {/* "Pasta" com as últimas localizações do rastreador selecionado */}
+            {/* ================================================== */}
+            {/* ABAS */}
+            {/* ================================================== */}
+
             {selectedTracker && (
-                <View style={folderStyle}>
-                    <View style={folderHeaderStyle}>
-                        <MaterialIcons name="folder-open" size={20} color="rgb(163, 204, 127)" />
-                        <Text style={folderHeaderTextStyle} numberOfLines={1}>
-                            Últimas localizações — {selectedTracker.name}
+
+                <View style={styles.tabRow}>
+
+                    {/* LOCALIZAÇÕES */}
+
+                    <TouchableOpacity
+                        style={[
+                            styles.tabButton,
+
+                            isDark &&
+                            styles.darkTabButton,
+
+                            activeTab ===
+                            'locations' &&
+                            styles.tabButtonActive,
+                        ]}
+                        onPress={() =>
+                            setActiveTab(
+                                'locations'
+                            )
+                        }
+                    >
+
+                        <MaterialIcons
+                            name="place"
+                            size={16}
+                            color={
+                                activeTab ===
+                                    'locations'
+                                    ? '#FFFFFF'
+                                    : isDark
+                                        ? '#B8D89A'
+                                        : 'rgb(110, 148, 80)'
+                            }
+                        />
+
+                        <Text
+                            style={[
+                                styles.tabButtonText,
+
+                                isDark &&
+                                styles.darkTabButtonText,
+
+                                activeTab ===
+                                'locations' &&
+                                styles.tabButtonTextActive,
+                            ]}
+                        >
+                            Localizações
                         </Text>
+
+                    </TouchableOpacity>
+
+                    {/* ROTAS */}
+
+                    <TouchableOpacity
+                        style={[
+                            styles.tabButton,
+
+                            isDark &&
+                            styles.darkTabButton,
+
+                            activeTab ===
+                            'routes' &&
+                            styles.tabButtonActive,
+                        ]}
+                        onPress={() =>
+                            setActiveTab(
+                                'routes'
+                            )
+                        }
+                    >
+
+                        <MaterialIcons
+                            name="alt-route"
+                            size={16}
+                            color={
+                                activeTab ===
+                                    'routes'
+                                    ? '#FFFFFF'
+                                    : isDark
+                                        ? '#B8D89A'
+                                        : 'rgb(110, 148, 80)'
+                            }
+                        />
+
+                        <Text
+                            style={[
+                                styles.tabButtonText,
+
+                                isDark &&
+                                styles.darkTabButtonText,
+
+                                activeTab ===
+                                'routes' &&
+                                styles.tabButtonTextActive,
+                            ]}
+                        >
+                            Rotas
+                        </Text>
+
+                    </TouchableOpacity>
+
+                </View>
+
+            )}
+
+            {/* ================================================== */}
+            {/* PASTA */}
+            {/* ================================================== */}
+
+            {selectedTracker && (
+
+                <View style={folderStyle}>
+
+                    {/* CABEÇALHO DA PASTA */}
+
+                    <View
+                        style={
+                            folderHeaderStyle
+                        }
+                    >
+
+                        <MaterialIcons
+                            name={
+                                activeTab ===
+                                    'locations'
+                                    ? 'folder-open'
+                                    : 'alt-route'
+                            }
+                            size={20}
+                            color="rgb(163, 204, 127)"
+                        />
+
+                        <Text
+                            style={
+                                folderHeaderTextStyle
+                            }
+                            numberOfLines={1}
+                        >
+                            {activeTab ===
+                                'locations'
+                                ? `Últimas localizações — ${selectedTracker.name}`
+                                : `Rotas percorridas — ${selectedTracker.name}`}
+                        </Text>
+
                     </View>
 
-                    {loadingHistory ? (
-                        <ActivityIndicator style={{ marginTop: 20 }} color={isDark ? '#F3F4F6' : '#111827'} />
-                    ) : history.length === 0 ? (
-                        <Text style={emptyTextStyle}>
-                            Nenhuma localização registrada ainda para este rastreador.
-                        </Text>
-                    ) : (
-                        <FlatList
-                            data={history}
-                            keyExtractor={(_, index) => String(index)}
-                            renderItem={({ item, index }) => (
-                                <TouchableOpacity
-                                    style={historyItemStyle}
-                                    onPress={() => handleSelectLocation(item)}
-                                    activeOpacity={0.7}
-                                >
-                                    <MaterialIcons
-                                        name="place"
-                                        size={20}
-                                        color={isDark ? '#AFB9C7' : '#888'}
-                                        style={{ marginRight: 8 }}
-                                    />
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={historyItemTitleStyle}>
-                                            {index === 0
-                                                ? 'Localização mais recente'
-                                                : `${index + 1}ª localização anterior`}
-                                        </Text>
-                                        <Text style={historyItemCoordsStyle}>
-                                            lat {item.latitude.toFixed(5)}, lon {item.longitude.toFixed(5)}
-                                        </Text>
-                                        <Text style={historyItemDateStyle}>
-                                            {formatDate(item.lastUpdate)}
-                                        </Text>
-                                    </View>
-                                    <MaterialIcons name="chevron-right" size={20} color={isDark ? '#AFB9C7' : '#ccc'} />
-                                </TouchableOpacity>
-                            )}
+                    {/* ================================================== */}
+                    {/* LOADING */}
+                    {/* ================================================== */}
+
+                    {loadingData ? (
+
+                        <ActivityIndicator
+                            style={{
+                                marginTop: 20,
+                            }}
+                            color={
+                                isDark
+                                    ? '#A3CC7F'
+                                    : undefined
+                            }
                         />
+
+                    ) : activeTab ===
+                        'locations' ? (
+
+                        /* ================================================== */
+                        /* LOCALIZAÇÕES */
+                        /* ================================================== */
+
+                        history.length === 0 ? (
+
+                            <Text
+                                style={
+                                    emptyTextStyle
+                                }
+                            >
+                                Nenhuma localização
+                                registrada ainda
+                                para este
+                                rastreador.
+                            </Text>
+
+                        ) : (
+
+                            <FlatList
+                                data={history}
+                                keyExtractor={(
+                                    _,
+                                    index
+                                ) =>
+                                    String(index)
+                                }
+                                renderItem={({
+                                    item,
+                                    index,
+                                }) => (
+
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.historyItem,
+
+                                            isDark &&
+                                            styles.darkHistoryItem,
+                                        ]}
+                                        onPress={() =>
+                                            handleSelectLocation(
+                                                item
+                                            )
+                                        }
+                                        activeOpacity={
+                                            0.7
+                                        }
+                                    >
+
+                                        <MaterialIcons
+                                            name="place"
+                                            size={20}
+                                            color={
+                                                isDark
+                                                    ? '#AEB8C5'
+                                                    : '#888'
+                                            }
+                                            style={{
+                                                marginRight: 8,
+                                            }}
+                                        />
+
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                            }}
+                                        >
+
+                                            <Text
+                                                style={[
+                                                    styles.historyItemTitle,
+
+                                                    isDark &&
+                                                    styles.darkHistoryItemTitle,
+                                                ]}
+                                            >
+                                                {index ===
+                                                    0
+                                                    ? 'Localização mais recente'
+                                                    : `${index + 1}ª localização anterior`}
+                                            </Text>
+
+                                            <Text
+                                                style={[
+                                                    styles.historyItemCoords,
+
+                                                    isDark &&
+                                                    styles.darkHistoryItemCoords,
+                                                ]}
+                                            >
+                                                lat{' '}
+                                                {item.latitude.toFixed(
+                                                    5
+                                                )}
+                                                , lon{' '}
+                                                {item.longitude.toFixed(
+                                                    5
+                                                )}
+                                            </Text>
+
+                                            <Text
+                                                style={[
+                                                    styles.historyItemDate,
+
+                                                    isDark &&
+                                                    styles.darkHistoryItemDate,
+                                                ]}
+                                            >
+                                                {formatDate(
+                                                    item.lastUpdate
+                                                )}
+                                            </Text>
+
+                                        </View>
+
+                                        <MaterialIcons
+                                            name="chevron-right"
+                                            size={20}
+                                            color={
+                                                isDark
+                                                    ? '#667384'
+                                                    : '#CCCCCC'
+                                            }
+                                        />
+
+                                    </TouchableOpacity>
+
+                                )}
+                            />
+
+                        )
+
+                    ) : (
+
+                        /* ================================================== */
+                        /* ROTAS */
+                        /* ================================================== */
+
+                        routes.length === 0 ? (
+
+                            <Text
+                                style={
+                                    emptyTextStyle
+                                }
+                            >
+                                Nenhuma rota
+                                registrada ainda.
+                                As rotas são gravadas
+                                automaticamente
+                                enquanto o Tempo
+                                Real estiver ativo
+                                e o rastreador se
+                                mover.
+                            </Text>
+
+                        ) : (
+
+                            <FlatList
+                                data={routes}
+                                keyExtractor={
+                                    item =>
+                                        item.id
+                                }
+                                renderItem={({
+                                    item,
+                                }) => (
+
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.historyItem,
+
+                                            isDark &&
+                                            styles.darkHistoryItem,
+                                        ]}
+                                        onPress={() =>
+                                            handleSelectRoute(
+                                                item
+                                            )
+                                        }
+                                        activeOpacity={
+                                            0.7
+                                        }
+                                    >
+
+                                        <MaterialIcons
+                                            name="alt-route"
+                                            size={20}
+                                            color={
+                                                isDark
+                                                    ? '#AEB8C5'
+                                                    : '#888'
+                                            }
+                                            style={{
+                                                marginRight: 8,
+                                            }}
+                                        />
+
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                            }}
+                                        >
+
+                                            <Text
+                                                style={[
+                                                    styles.historyItemTitle,
+
+                                                    isDark &&
+                                                    styles.darkHistoryItemTitle,
+                                                ]}
+                                            >
+                                                {formatDistance(
+                                                    item.distanceKm
+                                                )}
+                                            </Text>
+
+                                            <Text
+                                                style={[
+                                                    styles.historyItemCoords,
+
+                                                    isDark &&
+                                                    styles.darkHistoryItemCoords,
+                                                ]}
+                                            >
+                                                {formatDate(
+                                                    item.startTime
+                                                )}
+                                            </Text>
+
+                                            <Text
+                                                style={[
+                                                    styles.historyItemDate,
+
+                                                    isDark &&
+                                                    styles.darkHistoryItemDate,
+                                                ]}
+                                            >
+                                                até{' '}
+                                                {formatDate(
+                                                    item.endTime
+                                                )}
+                                            </Text>
+
+                                        </View>
+
+                                        <MaterialIcons
+                                            name="chevron-right"
+                                            size={20}
+                                            color={
+                                                isDark
+                                                    ? '#667384'
+                                                    : '#CCCCCC'
+                                            }
+                                        />
+
+                                    </TouchableOpacity>
+
+                                )}
+                            />
+
+                        )
+
                     )}
+
                 </View>
+
             )}
+
         </View>
     );
 }

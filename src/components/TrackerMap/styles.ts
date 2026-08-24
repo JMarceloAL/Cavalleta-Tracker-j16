@@ -1,21 +1,46 @@
-// src/components/TrackerMap/styles.ts
-import { StyleSheet } from 'react-native';
+import {
+    StyleSheet,
+} from 'react-native';
 
-export default StyleSheet.create({
-    marker: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        backgroundColor: '#1E90FF',
-        borderWidth: 2,
-        borderColor: '#fff',
+export const styles = StyleSheet.create({
+    container: {
+        flex: 1,
     },
 
     map: {
-
-        height: '100%',
+        flex: 1,
         width: '100%',
+        height: '100%',
+    },
 
+    marker: {
+        width: 20,
+        height: 20,
 
-    }
+        borderRadius: 10,
+
+        backgroundColor:
+            '#1E90FF',
+
+        borderWidth: 3,
+
+        borderColor:
+            '#FFFFFF',
+
+        elevation: 5,
+
+        shadowColor:
+            '#000000',
+
+        shadowOpacity:
+            0.3,
+
+        shadowRadius:
+            4,
+
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+    },
 });
