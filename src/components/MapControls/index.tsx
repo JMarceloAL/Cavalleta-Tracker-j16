@@ -40,6 +40,22 @@ type Props = {
     checkingRealTime?: boolean;
 
     realTimeDisabled?: boolean;
+
+    /**
+     * ========================================================
+     * MODO VIGILANTE
+     * ========================================================
+     */
+
+    vigilanteEnabled: boolean;
+
+    onToggleVigilante: (
+        value: boolean
+    ) => void;
+
+    checkingVigilante?: boolean;
+
+    vigilanteDisabled?: boolean;
 };
 
 export default function MapControls({
@@ -59,6 +75,14 @@ export default function MapControls({
     checkingRealTime = false,
 
     realTimeDisabled = false,
+
+    vigilanteEnabled,
+
+    onToggleVigilante,
+
+    checkingVigilante = false,
+
+    vigilanteDisabled = false,
 
 }: Props) {
 
@@ -97,25 +121,90 @@ export default function MapControls({
                     }
                 />
 
-                <Switch
+                {checkingRealTime ? (
+                    <ActivityIndicator
+                        size="small"
+                        color="rgb(163, 204, 127)"
+                        style={styles.switch}
+                    />
+                ) : (
+                    <Switch
+
+                        style={
+                            styles.switch
+                        }
+
+                        value={
+                            realTimeEnabled
+                        }
+
+                        onValueChange={
+                            onToggleRealTime
+                        }
+
+                        disabled={
+                            checkingRealTime ||
+                            realTimeDisabled
+                        }
+                    />
+                )}
+
+            </View>
+
+            {/* ==================================================
+                MODO VIGILANTE
+            ================================================== */}
+
+            <View
+                style={
+                    styles.vigilanteSwitchWrapper
+                }
+            >
+
+                <Ionicons
+
+                    name="shield-checkmark-outline"
+
+                    size={25}
+
+                    color={
+                        vigilanteEnabled
+                            ? 'rgb(163, 204, 127)'
+                            : '#999'
+                    }
 
                     style={
-                        styles.switch
-                    }
-
-                    value={
-                        realTimeEnabled
-                    }
-
-                    onValueChange={
-                        onToggleRealTime
-                    }
-
-                    disabled={
-                        checkingRealTime ||
-                        realTimeDisabled
+                        styles.signalIcon
                     }
                 />
+
+                {checkingVigilante ? (
+                    <ActivityIndicator
+                        size="small"
+                        color="rgb(163, 204, 127)"
+                        style={styles.switch}
+                    />
+                ) : (
+                    <Switch
+
+                        style={
+                            styles.switch
+                        }
+
+                        value={
+                            vigilanteEnabled
+                        }
+
+                        onValueChange={
+                            onToggleVigilante
+                        }
+
+                        disabled={
+                            checkingVigilante ||
+                            vigilanteDisabled
+                        }
+                    />
+                )}
 
             </View>
 

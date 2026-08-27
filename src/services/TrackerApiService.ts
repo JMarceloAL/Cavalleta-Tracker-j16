@@ -10,43 +10,77 @@ const API_URL = (
 
 const API_KEY = process.env.EXPO_PUBLIC_API_KEY;
 
+const DEFAULT_TIMEOUT_MS = 8000;
+
 function normalizeImei(imei: string): string {
     const digits = String(imei).replace(/\D/g, '');
 
     return digits.padStart(16, '0');
 }
 
+/**
+ * Faz a chamada à API sempre com timeout (AbortController).
+ *
+ * Sem isso, se o servidor cair de um jeito que não recuse a
+ * conexão na hora (porta filtrada, processo travado etc.), o
+ * fetch() fica pendurado indefinidamente — e qualquer polling
+ * que dependa dele (como o Modo Vigilante) nunca detecta a
+ * queda e nunca sai do estado de "carregando".
+ */
 async function apiFetch(
     path: string,
-    signal?: AbortSignal
+    timeoutMs: number = DEFAULT_TIMEOUT_MS
 ) {
-    const response = await fetch(
-        `${API_URL}/api${path}`,
-        {
-            headers: {
-                'x-api-key': API_KEY ?? '',
-                Accept: 'application/json',
-            },
-            signal,
-        }
+    const controller = new AbortController();
+
+    const timeout = setTimeout(
+        () => controller.abort(),
+        timeoutMs
     );
 
-    if (!response.ok) {
-        const errorBody = await response
-            .json()
-            .catch(() => null);
-
-        const error: any = new Error(
-            errorBody?.error ??
-            `Erro ${response.status} ao consultar a API`
+    try {
+        const response = await fetch(
+            `${API_URL}/api${path}`,
+            {
+                headers: {
+                    'x-api-key': API_KEY ?? '',
+                    Accept: 'application/json',
+                },
+                signal: controller.signal,
+            }
         );
 
-        error.status = response.status;
+        if (!response.ok) {
+            const errorBody = await response
+                .json()
+                .catch(() => null);
+
+            const error: any = new Error(
+                errorBody?.error ??
+                `Erro ${response.status} ao consultar a API`
+            );
+
+            error.status = response.status;
+
+            throw error;
+        }
+
+        return await response.json();
+    } catch (error: any) {
+        if (error?.name === 'AbortError') {
+            const timeoutError: any = new Error(
+                `Tempo esgotado ao consultar a API (${timeoutMs}ms).`
+            );
+
+            timeoutError.code = 'TIMEOUT';
+
+            throw timeoutError;
+        }
 
         throw error;
+    } finally {
+        clearTimeout(timeout);
     }
-
-    return response.json();
 }
 
 type ApiGps = {
@@ -60,6 +94,22 @@ type ApiGps = {
     dataUTC?: string;
 };
 
+/**
+ * Estado de movimento calculado pelo servidor (trackerStore.js).
+ *
+ * - moving: true enquanto uma rota está em andamento
+ * - alarmPending: true quando um alarme (vibração etc.) chegou mas
+ *   ainda não foi confirmado por um GPS com velocidade > 0.5km/h
+ * - lastMovementAt / lastAlarmAt: timestamps ISO ou null
+ */
+export type ApiMovement = {
+    moving: boolean;
+    alarmPending: boolean;
+    routeId: string | null;
+    lastMovementAt: string | null;
+    lastAlarmAt: string | null;
+};
+
 export type ApiTracker = {
     imei: string;
     online: boolean;
@@ -69,6 +119,7 @@ export type ApiTracker = {
         status: number;
         serial: string;
     } | null;
+    movement?: ApiMovement | null;
 };
 
 export async function fetchAllTrackers(): Promise<ApiTracker[]> {
@@ -76,10 +127,12 @@ export async function fetchAllTrackers(): Promise<ApiTracker[]> {
 }
 
 export async function fetchTrackerData(
-    imei: string
+    imei: string,
+    timeoutMs?: number
 ): Promise<ApiTracker> {
     return apiFetch(
-        `/tracker/${normalizeImei(imei)}`
+        `/tracker/${normalizeImei(imei)}`,
+        timeoutMs
     );
 }
 

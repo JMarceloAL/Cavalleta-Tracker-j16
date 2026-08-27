@@ -29,17 +29,9 @@ import {
 } from '../../contexts/ThemeContext';
 
 import {
-    useRealTime,
-} from '../../contexts/RealTimeContext';
-
-import {
     getCredentials,
     saveCredentials,
 } from '../../services/storage/authStorage';
-
-import {
-    requestNotificationPermissions,
-} from '../../services/NotificationService';
 
 import Collapsible from '../../components/Collapsible';
 
@@ -51,13 +43,6 @@ export default function SettingsScreen({
         setTheme,
     } = useTheme();
 
-    const {
-        realTimeEnabled,
-        activeTrackerName,
-        vigilanteEnabled,
-        setVigilanteEnabled,
-    } = useRealTime();
-
     const [
         username,
         setUsername,
@@ -67,6 +52,16 @@ export default function SettingsScreen({
         password,
         setPassword,
     ] = useState('root');
+
+    /**
+     * ========================================================
+     * CONFIRMAÇÃO DE SENHA
+     * ========================================================
+     */
+    const [
+        confirmPassword,
+        setConfirmPassword,
+    ] = useState('');
 
     const [
         isLoading,
@@ -120,6 +115,24 @@ export default function SettingsScreen({
      * ========================================================
      */
     async function handleSaveCredentials() {
+        if (password.trim() === '') {
+            Alert.alert(
+                'Aviso',
+                'A senha não pode ficar em branco.'
+            );
+
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            Alert.alert(
+                'Senhas não conferem',
+                'A confirmação de senha precisa ser igual à nova senha digitada.'
+            );
+
+            return;
+        }
+
         try {
             await saveCredentials(
                 username,
@@ -131,6 +144,7 @@ export default function SettingsScreen({
                 'Usuário e senha atualizados.'
             );
 
+            setConfirmPassword('');
             setCredentialsOpen(false);
         } catch (error) {
             Alert.alert(
@@ -179,51 +193,6 @@ export default function SettingsScreen({
                 },
             ]
         );
-    }
-
-    /**
-     * ========================================================
-     * MODO VIGILANTE
-     * ========================================================
-     */
-    async function handleToggleVigilante(
-        value: boolean
-    ) {
-        /**
-         * Não permite ativar o Vigilante
-         * sem Tempo Real.
-         */
-        if (
-            value &&
-            !realTimeEnabled
-        ) {
-            Alert.alert(
-                'Tempo Real necessário',
-                'Ative o Tempo Real no mapa antes de ativar o Modo Vigilante.'
-            );
-
-            return;
-        }
-
-        /**
-         * Solicita permissão de notificações
-         * somente ao ativar.
-         */
-        if (value) {
-            const granted =
-                await requestNotificationPermissions();
-
-            if (!granted) {
-                Alert.alert(
-                    'Permissão necessária',
-                    'Ative as notificações para usar o Modo Vigilante.'
-                );
-
-                return;
-            }
-        }
-
-        setVigilanteEnabled(value);
     }
 
     /**
@@ -330,55 +299,6 @@ export default function SettingsScreen({
             </View>
 
             {/* =================================================
-                MODO VIGILANTE
-            ================================================= */}
-            <View style={rowStyle}>
-                <View
-                    style={{
-                        flex: 1,
-                        marginRight: 12,
-                    }}
-                >
-                    <Text
-                        style={labelStyle}
-                    >
-                        Modo Vigilante
-                    </Text>
-
-                    <Text
-                        style={helpStyle}
-                    >
-                        {realTimeEnabled
-                            ? `Monitora ${activeTrackerName ??
-                            'o rastreador'
-                            } em busca de alarmes e movimento.`
-                            : 'Ative o Tempo Real no mapa para usar esta função.'}
-                    </Text>
-                </View>
-
-                <Switch
-                    value={
-                        vigilanteEnabled
-                    }
-                    onValueChange={
-                        handleToggleVigilante
-                    }
-                    disabled={
-                        !realTimeEnabled
-                    }
-                    thumbColor={
-                        isDark
-                            ? '#F3F4F6'
-                            : '#FFFFFF'
-                    }
-                    trackColor={{
-                        false: '#D1D5DB',
-                        true: 'rgb(163, 204, 127)',
-                    }}
-                />
-            </View>
-
-            {/* =================================================
                 CREDENCIAIS
             ================================================= */}
             <View style={formStyle}>
@@ -465,6 +385,24 @@ export default function SettingsScreen({
                             value={password}
                             onChangeText={
                                 setPassword
+                            }
+                            secureTextEntry
+                            editable={
+                                !isLoading
+                            }
+                        />
+
+                        <TextInput
+                            style={inputStyle}
+                            placeholder="Confirmar senha"
+                            placeholderTextColor={
+                                isDark
+                                    ? '#AFB9C7'
+                                    : '#8E8E93'
+                            }
+                            value={confirmPassword}
+                            onChangeText={
+                                setConfirmPassword
                             }
                             secureTextEntry
                             editable={

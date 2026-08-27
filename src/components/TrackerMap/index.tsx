@@ -1,5 +1,7 @@
 import React, {
+    forwardRef,
     useEffect,
+    useImperativeHandle,
     useMemo,
     useRef,
 } from 'react';
@@ -38,21 +40,49 @@ type Props = {
 
     routePoints?:
     RoutePoint[];
+
+    /**
+     * Quando true, a câmera acompanha automaticamente
+     * as atualizações de localização (modo "seguir").
+     *
+     * Quando false, o mapa fica livre: o marcador
+     * continua se movendo, mas a câmera não se mexe.
+     */
+    followEnabled?: boolean;
+
+    /**
+     * Disparado quando o próprio usuário arrasta/gesticula
+     * no mapa (não dispara nos easeTo programáticos que
+     * o componente faz sozinho).
+     */
+    onUserPanned?: () => void;
 };
 
-const MAPTILER_KEY =
-    process.env.EXPO_PUBLIC_MAPTILER_KEY;
+export type TrackerMapHandle = {
+    /**
+     * Centraliza a câmera imediatamente na posição atual
+     * do rastreador. Usado pelo botão de recentralizar.
+     */
+    centerOnTracker: () => void;
+};
 
-const MAP_STYLE_LIGHT =
-    `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`;
-
-const MAP_STYLE_DARK =
-    `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`;
-
-export default function TrackerMap({
-    location,
-    routePoints = [],
-}: Props) {
+/**
+ * IMPORTANTE: os tipos <TrackerMapHandle, Props> NÃO são passados
+ * como argumentos genéricos explícitos pro forwardRef aqui —
+ * em arquivos .tsx isso pode confundir o parser do TypeScript
+ * (ele tenta interpretar como JSX). Em vez disso, tipamos os
+ * próprios parâmetros da função (props e ref) e deixamos o TS
+ * inferir os genéricos sozinho.
+ */
+const TrackerMap = forwardRef(function TrackerMap(
+    {
+        location,
+        routePoints = [],
+        followEnabled = true,
+        onUserPanned,
+    }: Props,
+    ref: React.Ref<TrackerMapHandle>
+) {
     const {
         isDark,
     } = useTheme();
@@ -85,6 +115,29 @@ export default function TrackerMap({
                     : [0, 0],
             [location]
         );
+
+    /*
+     * ============================================================
+     * MÉTODO EXPOSTO AO MAPSCREEN (botão recentralizar)
+     * ============================================================
+     */
+
+    useImperativeHandle(
+        ref,
+        () => ({
+            centerOnTracker: () => {
+                if (!location) {
+                    return;
+                }
+
+                cameraRef.current?.easeTo({
+                    center: lngLat,
+                    duration: 600,
+                });
+            },
+        }),
+        [location, lngLat]
+    );
 
     /*
      * ============================================================
@@ -161,7 +214,7 @@ export default function TrackerMap({
 
     /*
      * ============================================================
-     * CENTRALIZAÇÃO
+     * CENTRALIZAÇÃO AUTOMÁTICA (MODO SEGUIR)
      * ============================================================
      */
 
@@ -180,9 +233,15 @@ export default function TrackerMap({
         }
 
         /*
-         * Atualizações seguintes:
-         * movimentação suave.
+         * Só acompanha automaticamente se o modo
+         * "seguir" estiver ativo. Se o usuário tiver
+         * soltado o mapa (followEnabled = false),
+         * a câmera fica parada e só o marcador se move.
          */
+        if (!followEnabled) {
+            return;
+        }
+
         cameraRef.current?.easeTo({
             center: lngLat,
             duration: 900,
@@ -190,7 +249,28 @@ export default function TrackerMap({
     }, [
         lngLat,
         location,
+        followEnabled,
     ]);
+
+    /*
+     * ============================================================
+     * DETECTA GESTO DO USUÁRIO NO MAPA
+     * ============================================================
+     *
+     * onRegionDidChange dispara tanto quando NÓS movemos a
+     * câmera (easeTo) quanto quando o USUÁRIO arrasta o mapa.
+     * O campo properties.isUserInteraction diferencia os dois
+     * casos — só nos importa quando for true.
+     */
+
+    function handleRegionDidChange(event: any) {
+        const isUserInteraction =
+            event?.properties?.isUserInteraction;
+
+        if (isUserInteraction) {
+            onUserPanned?.();
+        }
+    }
 
     /*
      * ============================================================
@@ -227,6 +307,10 @@ export default function TrackerMap({
             androidView="texture"
 
             compass={false}
+
+            onRegionDidChange={
+                handleRegionDidChange
+            }
         >
             <Camera
                 ref={cameraRef}
@@ -242,9 +326,6 @@ export default function TrackerMap({
              * ====================================================
              * LINHA DA ROTA
              * ====================================================
-             *
-             * Na v11, ShapeSource virou GeoJSONSource (prop "shape"
-             * virou "data"), e LineLayer virou <Layer type="line">.
              */}
 
             {routeGeoJson.geometry.coordinates.length >=
@@ -306,4 +387,15 @@ export default function TrackerMap({
             </Marker>
         </Map>
     );
-}
+});
+
+const MAPTILER_KEY =
+    process.env.EXPO_PUBLIC_MAPTILER_KEY;
+
+const MAP_STYLE_LIGHT =
+    `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`;
+
+const MAP_STYLE_DARK =
+    `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`;
+
+export default TrackerMap;

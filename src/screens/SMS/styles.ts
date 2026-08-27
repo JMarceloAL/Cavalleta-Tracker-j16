@@ -42,6 +42,63 @@ export const styles = StyleSheet.create({
         gap: 8,
         alignItems: 'stretch',
     },
+    lockedBox: {
+        alignItems: 'center',
+        paddingVertical: 20,
+        paddingHorizontal: 16,
+    },
+    lockedText: {
+        fontSize: 13,
+        color: '#6B7280',
+        marginTop: 8,
+        marginBottom: 16,
+        textAlign: 'center',
+    },
+    darkLockedText: {
+        color: '#AFB9C7',
+    },
+    unlockButton: {
+        backgroundColor: 'rgb(163, 204, 127)',
+        borderRadius: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 24,
+    },
+    protectedSectionContainer: {
+        borderRadius: 14,
+        borderWidth: 1,
+        marginBottom: 16,
+        overflow: 'hidden',
+    },
+    protectedSectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+    },
+    protectedSectionHeaderTitleGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    protectedSectionLockIcon: {
+        marginRight: 6,
+        left: 10,
+    },
+    protectedSectionHeaderText: {
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    protectedSectionChevron: {
+        fontSize: 12,
+    },
+    protectedSectionContent: {
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+    },
+    unlockButtonText: {
+        color: '#FFFFFF',
+        fontWeight: '700',
+    },
 
     listButton: {
         backgroundColor: 'rgb(163, 204, 127)',

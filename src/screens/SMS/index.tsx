@@ -13,27 +13,57 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import TrackerDropdown from '../../components/TrackerDropdown';
 import ParamCommandModal from '../../components/ParamCommandModal';
+import PasswordConfirmModal from '../../components/PasswordConfirmModal';
 import CollapsibleSection from '../../components/CollapsibleSection';
+import Collapsible from '../../components/Collapsible';
 import { useTrackerServiceProvider } from '../../contexts/TrackerServiceContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { requestSmsPermissions } from '../../services/Smsgateway';
-import { STATUS_COMMANDS, PARAM_COMMANDS } from '../../services/CommandCatalog';
+import {
+    STATUS_COMMANDS,
+    PROTECTED_STATUS_COMMANDS,
+    RESTORE_FACTORY_COMMAND,
+    PARAM_COMMANDS,
+} from '../../services/CommandCatalog';
 import type { StatusCommand, ParamCommand } from '../../services/CommandCatalog';
 import type { Tracker } from '../../types/Tracker';
 import { styles } from './styles';
 
 const STORAGE_KEY = '@cavalleta:trackers';
 
+/**
+ * Extraído como type alias porque `useState<(() => void) | null>`
+ * direto na chamada confunde o parser do TypeScript em arquivos
+ * .tsx (a sequência "<(" é ambígua com JSX).
+ */
+type PendingAction = (() => void) | null;
+
 export default function SmsScreen() {
     const navigation = useNavigation<any>();
     const { getService } = useTrackerServiceProvider();
-    const { isDark } = useTheme();
+    const { isDark, colors } = useTheme();
 
     const [trackers, setTrackers] = useState<Tracker[]>([]);
     const [selectedTracker, setSelectedTracker] = useState<Tracker | null>(null);
     const [loadingCommandId, setLoadingCommandId] = useState<string | null>(null);
     const [response, setResponse] = useState<{ command: string; text: string } | null>(null);
     const [activeParamCommand, setActiveParamCommand] = useState<ParamCommand | null>(null);
+
+    /**
+     * ========================================================
+     * ACESSO RESTRITO — SEÇÃO PARÂMETROS
+     * ========================================================
+     *
+     * Diferente do CollapsibleSection genérico (que guarda o
+     * open/close internamente), aqui o open/close é controlado
+     * por nós (parametrosOpen), justamente pra poder trancar de
+     * novo toda vez que a seção for fechada — reabrir sempre
+     * pede senha, mesmo sem sair da tela.
+     */
+    const [parametrosOpen, setParametrosOpen] = useState(false);
+    const [parametrosUnlocked, setParametrosUnlocked] = useState(false);
+    const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+    const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
     const loadTrackers = useCallback(async () => {
         try {
@@ -53,6 +83,13 @@ export default function SmsScreen() {
     useFocusEffect(
         useCallback(() => {
             loadTrackers();
+
+            /**
+             * Sair da tela e voltar também tranca e fecha a
+             * seção, por segurança.
+             */
+            setParametrosOpen(false);
+            setParametrosUnlocked(false);
         }, [loadTrackers])
     );
 
@@ -140,6 +177,62 @@ export default function SmsScreen() {
         executeCommand(commandString, activeParamCommand.id);
     }
 
+    /**
+     * ========================================================
+     * ACESSO RESTRITO — HANDLERS
+     * ========================================================
+     */
+
+    function requestUnlock(action: () => void) {
+        setPendingAction(() => action);
+        setPasswordModalVisible(true);
+    }
+
+    function handlePasswordSuccess() {
+        setParametrosUnlocked(true);
+        setPasswordModalVisible(false);
+
+        if (pendingAction) {
+            pendingAction();
+            setPendingAction(null);
+        }
+    }
+
+    function handlePasswordCancel() {
+        setPasswordModalVisible(false);
+        setPendingAction(null);
+    }
+
+    /**
+     * Toque no cabeçalho da seção Parâmetros.
+     *
+     * - Se estiver ABERTA: fecha e tranca de novo
+     *   (parametrosUnlocked volta a false). Da próxima vez
+     *   que tentar abrir, vai pedir senha de novo.
+     * - Se estiver FECHADA: pede a senha antes de abrir.
+     */
+    function handleToggleParametros() {
+        if (parametrosOpen) {
+            setParametrosOpen(false);
+            setParametrosUnlocked(false);
+            return;
+        }
+
+        requestUnlock(() => {
+            setParametrosOpen(true);
+        });
+    }
+
+    function handleProtectedStatusCommandPress(cmd: StatusCommand) {
+        // A esta altura a seção já está desbloqueada (só é
+        // possível ver/tocar nesses botões com ela aberta).
+        handleStatusCommandPress(cmd);
+    }
+
+    function handleParamCommandPress(cmd: ParamCommand) {
+        setActiveParamCommand(cmd);
+    }
+
     const containerStyle = [styles.container, isDark && styles.darkContainer];
     const responseBoxStyle = [styles.responseBox, isDark && styles.darkResponseBox];
     const responseCommandStyle = [styles.responseCommand, isDark && styles.darkResponseCommand];
@@ -185,21 +278,112 @@ export default function SmsScreen() {
                     </View>
                 </CollapsibleSection>
 
-                <CollapsibleSection title="Parâmetros">
-                    <View style={styles.list}>
-                        {PARAM_COMMANDS.map(cmd => (
-                            <TouchableOpacity
-                                key={cmd.id}
-                                style={styles.listButton}
-                                onPress={() => setActiveParamCommand(cmd)}
-                                disabled={loadingCommandId !== null}
-                                activeOpacity={0.85}
+                {/* ==================================================
+                    PARÂMETROS — SEÇÃO PROTEGIDA
+                    (open/close controlado manualmente, tranca
+                    de novo toda vez que é fechada)
+                ================================================== */}
+                <View
+                    style={[
+                        styles.protectedSectionContainer,
+                        {
+                            backgroundColor: colors.surfaceAlt,
+                            borderColor: colors.border,
+                        },
+                    ]}
+                >
+                    <TouchableOpacity
+                        style={styles.protectedSectionHeader}
+                        onPress={handleToggleParametros}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.protectedSectionHeaderTitleGroup}>
+                            <Text
+                                style={[
+                                    styles.protectedSectionHeaderText,
+                                    { color: colors.text },
+                                ]}
                             >
-                                <Text style={styles.buttonText}>{cmd.label}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </CollapsibleSection>
+                                Parâmetros
+                            </Text>
+
+                            <MaterialIcons
+                                name={parametrosOpen ? 'lock-open' : 'lock-outline'}
+                                size={16}
+                                color={colors.textMuted}
+                                style={styles.protectedSectionLockIcon}
+                            />
+                        </View>
+
+                        <Text
+                            style={[
+                                styles.protectedSectionChevron,
+                                { color: colors.textMuted },
+                            ]}
+                        >
+                            {parametrosOpen ? '▲' : '▼'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    <Collapsible open={parametrosOpen}>
+                        <View style={styles.protectedSectionContent}>
+                            <View style={styles.list}>
+                                {/* Comandos protegidos (sem o format, que vai por último) */}
+                                {PROTECTED_STATUS_COMMANDS.map(cmd => (
+                                    <TouchableOpacity
+                                        key={cmd.id}
+                                        style={styles.listButton}
+                                        onPress={() =>
+                                            handleProtectedStatusCommandPress(cmd)
+                                        }
+                                        disabled={loadingCommandId !== null}
+                                        activeOpacity={0.85}
+                                    >
+                                        {loadingCommandId === cmd.id ? (
+                                            <ActivityIndicator size="small" color="#fff" />
+                                        ) : (
+                                            <Text style={styles.buttonText}>{cmd.label}</Text>
+                                        )}
+                                    </TouchableOpacity>
+                                ))}
+
+                                {/* Comandos de configuração (com campos) */}
+                                {PARAM_COMMANDS.map(cmd => (
+                                    <TouchableOpacity
+                                        key={cmd.id}
+                                        style={styles.listButton}
+                                        onPress={() => handleParamCommandPress(cmd)}
+                                        disabled={loadingCommandId !== null}
+                                        activeOpacity={0.85}
+                                    >
+                                        <Text style={styles.buttonText}>{cmd.label}</Text>
+                                    </TouchableOpacity>
+                                ))}
+
+                                {/* Restaurar Padrão de Fábrica — sempre por último */}
+                                <TouchableOpacity
+                                    key={RESTORE_FACTORY_COMMAND.id}
+                                    style={[styles.listButton, styles.buttonDestructive]}
+                                    onPress={() =>
+                                        handleProtectedStatusCommandPress(
+                                            RESTORE_FACTORY_COMMAND
+                                        )
+                                    }
+                                    disabled={loadingCommandId !== null}
+                                    activeOpacity={0.85}
+                                >
+                                    {loadingCommandId === RESTORE_FACTORY_COMMAND.id ? (
+                                        <ActivityIndicator size="small" color="#fff" />
+                                    ) : (
+                                        <Text style={styles.buttonText}>
+                                            {RESTORE_FACTORY_COMMAND.label}
+                                        </Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </Collapsible>
+                </View>
             </ScrollView>
 
             {activeParamCommand && (
@@ -211,6 +395,14 @@ export default function SmsScreen() {
                     onSubmit={handleParamSubmit}
                 />
             )}
+
+            <PasswordConfirmModal
+                visible={passwordModalVisible}
+                onClose={handlePasswordCancel}
+                onSuccess={handlePasswordSuccess}
+                title="Parâmetros protegidos"
+                subtitle="Digite a senha do app para acessar os comandos de configuração."
+            />
         </View>
     );
 }

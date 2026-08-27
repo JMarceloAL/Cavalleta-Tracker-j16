@@ -1,3 +1,5 @@
+
+//App.js
 import AppRoutes from './src/routes/Approutes/AppRoutes';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { TrackerServiceProvider } from './src/contexts/TrackerServiceContext';

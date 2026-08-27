@@ -39,6 +39,19 @@ export const STATUS_COMMANDS: StatusCommand[] = [
     { id: 'sosGet', label: 'Consultar SOS', build: () => TrackerCommands.getSosNumbers() },
     { id: 'callFunGet', label: 'Consultar Função de Chamada', build: () => TrackerCommands.getCallFunction() },
     { id: 'sleepGet', label: 'Consultar Modo Sleep', build: () => TrackerCommands.getSleepMode() },
+];
+
+/**
+ * ========================================================
+ * COMANDOS PROTEGIDOS
+ * ========================================================
+ *
+ * Antes ficavam soltos em STATUS_COMMANDS. Agora vivem
+ * dentro da seção "Parâmetros", que exige senha antes de
+ * ficar acessível — tanto pra abrir/ver os botões quanto
+ * pra executar qualquer um deles.
+ */
+export const PROTECTED_STATUS_COMMANDS: StatusCommand[] = [
     { id: 'autoAnswerOn', label: 'Ativar Atendimento Automático', build: () => TrackerCommands.enableAutoAnswer() },
     { id: 'autoAnswerOff', label: 'Desativar Atendimento Automático', build: () => TrackerCommands.disableAutoAnswer() },
     {
@@ -48,15 +61,21 @@ export const STATUS_COMMANDS: StatusCommand[] = [
         confirm: true,
         confirmMessage: 'Isso vai reiniciar o rastreador. Deseja continuar?',
     },
-    {
-        id: 'format',
-        label: 'Restaurar Padrão de Fábrica',
-        build: () => TrackerCommands.format(),
-        confirm: true,
-        confirmMessage: '⚠️ Isso apaga TODAS as configurações do rastreador. Tem certeza?',
-        destructive: true,
-    },
 ];
+
+/**
+ * Extraído do array acima e exportado sozinho porque a tela SMS
+ * renderiza ele separado, sempre como o último botão da seção
+ * protegida, com destaque visual (vermelho/destrutivo).
+ */
+export const RESTORE_FACTORY_COMMAND: StatusCommand = {
+    id: 'format',
+    label: 'Restaurar Padrão de Fábrica',
+    build: () => TrackerCommands.format(),
+    confirm: true,
+    confirmMessage: '⚠️ Isso apaga TODAS as configurações do rastreador. Tem certeza?',
+    destructive: true,
+};
 
 export const PARAM_COMMANDS: ParamCommand[] = [
     {

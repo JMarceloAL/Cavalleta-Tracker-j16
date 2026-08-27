@@ -1,7 +1,10 @@
+// src/screens/Map/index.tsx
+
 import React, {
     useState,
     useEffect,
     useCallback,
+    useRef,
 } from 'react';
 
 import {
@@ -20,9 +23,12 @@ import {
     useNavigation,
 } from '@react-navigation/native';
 
-import TrackerMap from '../../components/TrackerMap';
+import TrackerMap, {
+    type TrackerMapHandle,
+} from '../../components/TrackerMap';
 import TrackerDropdown from '../../components/TrackerDropdown';
 import MapControls from '../../components/MapControls';
+import RecenterButton from '../../components/RecenterButton';
 
 import {
     useTrackerServiceProvider,
@@ -35,6 +41,10 @@ import {
 import {
     requestSmsPermissions,
 } from '../../services/Smsgateway';
+
+import {
+    requestNotificationPermissions,
+} from '../../services/NotificationService';
 
 import {
     saveLastLocation,
@@ -67,13 +77,13 @@ export default function MapScreen() {
         routePoints,
         startRealTime,
         stopRealTime,
-
-        /**
-         * Novo estado:
-         * recebe erros de conexão do
-         * RealTimeContext.
-         */
         realTimeError,
+
+        vigilanteEnabled:
+        globalVigilanteEnabled,
+        startVigilante,
+        stopVigilante,
+        vigilanteError,
     } = useRealTime();
 
     const route =
@@ -86,6 +96,9 @@ export default function MapScreen() {
         getService,
     } =
         useTrackerServiceProvider();
+
+    const mapRef =
+        useRef<TrackerMapHandle>(null);
 
     const [
         trackers,
@@ -127,6 +140,30 @@ export default function MapScreen() {
         smsLoading,
         setSmsLoading,
     ] = useState(false);
+
+    const [
+        vigilanteEnabled,
+        setVigilanteEnabled,
+    ] = useState(false);
+
+    const [
+        checkingVigilante,
+        setCheckingVigilante,
+    ] = useState(false);
+
+    /**
+     * ============================================================
+     * CENTRALIZAÇÃO / MODO SEGUIR
+     * ============================================================
+     *
+     * true  -> câmera acompanha o rastreador automaticamente
+     * false -> mapa livre (usuário arrastou), marcador se move
+     *          sozinho sem mexer na câmera
+     */
+    const [
+        followEnabled,
+        setFollowEnabled,
+    ] = useState(true);
 
     /**
      * ============================================================
@@ -227,13 +264,21 @@ export default function MapScreen() {
 
     /**
      * ============================================================
-     * AVISAR USUÁRIO QUANDO A API CAIR
+     * SINCRONIZAR MODO VIGILANTE DO CONTEXTO
      * ============================================================
-     *
-     * O RealTimeContext detecta que a API perdeu conexão
-     * e preenche realTimeError.
-     *
-     * Este efeito transforma o erro em um Alert.
+     */
+    useEffect(() => {
+        setVigilanteEnabled(
+            globalVigilanteEnabled
+        );
+    }, [
+        globalVigilanteEnabled,
+    ]);
+
+    /**
+     * ============================================================
+     * AVISAR USUÁRIO QUANDO A API CAIR (TEMPO REAL)
+     * ============================================================
      */
     useEffect(() => {
         if (!realTimeError) {
@@ -253,11 +298,37 @@ export default function MapScreen() {
 
     /**
      * ============================================================
+     * AVISAR USUÁRIO QUANDO O MODO VIGILANTE FALHAR
+     * ============================================================
+     */
+    useEffect(() => {
+        if (!vigilanteError) {
+            return;
+        }
+
+        Alert.alert(
+            '🛡️ Modo Vigilante',
+            vigilanteError,
+            [
+                {
+                    text: 'OK',
+                },
+            ]
+        );
+    }, [vigilanteError]);
+
+    /**
+     * ============================================================
      * TROCA DE RASTREADOR
      * ============================================================
      */
     useEffect(() => {
         setLocation(null);
+
+        /**
+         * Nova seleção -> volta a seguir automaticamente.
+         */
+        setFollowEnabled(true);
 
         if (
             selectedTracker?.id !==
@@ -330,6 +401,8 @@ export default function MapScreen() {
                 false
             );
 
+            setFollowEnabled(true);
+
             setLocation(
                 historyLocation as TrackerLocation
             );
@@ -365,6 +438,8 @@ export default function MapScreen() {
             setRealTimeEnabled(
                 false
             );
+
+            setFollowEnabled(true);
 
             /**
              * Centraliza na última posição
@@ -482,6 +557,7 @@ export default function MapScreen() {
             return;
         }
 
+        setFollowEnabled(true);
         setLocation(last);
     }
 
@@ -530,6 +606,7 @@ export default function MapScreen() {
                     reply.speed,
             };
 
+            setFollowEnabled(true);
             setLocation(
                 newLocation
             );
@@ -611,12 +688,6 @@ export default function MapScreen() {
         );
 
         try {
-            /**
-             * Única chamada inicial.
-             *
-             * O resultado é utilizado para verificar
-             * a disponibilidade antes de iniciar.
-             */
             const result =
                 await checkRealtimeAvailability(
                     selectedTracker.imei
@@ -640,9 +711,6 @@ export default function MapScreen() {
                 return;
             }
 
-            /**
-             * Inicia o Tempo Real.
-             */
             const started =
                 await startRealTime(
                     selectedTracker.id,
@@ -655,13 +723,6 @@ export default function MapScreen() {
                     false
                 );
 
-                /**
-                 * O RealTimeContext já pode ter
-                 * registrado um erro específico.
-                 *
-                 * Porém, se não houver erro registrado,
-                 * mostramos uma mensagem genérica.
-                 */
                 if (!realTimeError) {
                     Alert.alert(
                         '📡 Erro de conexão',
@@ -675,6 +736,8 @@ export default function MapScreen() {
             setRealTimeEnabled(
                 true
             );
+
+            setFollowEnabled(true);
 
             if (
                 result.status ===
@@ -746,6 +809,97 @@ export default function MapScreen() {
 
     /**
      * ============================================================
+     * MODO VIGILANTE
+     * ============================================================
+     */
+    async function handleToggleVigilante(
+        value: boolean
+    ) {
+        if (!value) {
+            stopVigilante();
+
+            setVigilanteEnabled(
+                false
+            );
+
+            return;
+        }
+
+        if (!selectedTracker) {
+            Alert.alert(
+                'Rastreador necessário',
+                'Selecione um rastreador primeiro.'
+            );
+
+            return;
+        }
+
+        if (!selectedTracker.imei) {
+            Alert.alert(
+                'IMEI necessário',
+                'O Modo Vigilante usa a API do servidor, que exige o IMEI do rastreador cadastrado. Edite o rastreador na tela Início e adicione o IMEI.'
+            );
+
+            return;
+        }
+
+        const granted =
+            await requestNotificationPermissions();
+
+        if (!granted) {
+            Alert.alert(
+                'Permissão necessária',
+                'Ative as notificações para usar o Modo Vigilante.'
+            );
+
+            return;
+        }
+
+        setCheckingVigilante(
+            true
+        );
+
+        try {
+            const started =
+                await startVigilante(
+                    selectedTracker.id,
+                    selectedTracker.name,
+                    selectedTracker.imei
+                );
+
+            setVigilanteEnabled(
+                started
+            );
+
+            if (!started && !vigilanteError) {
+                Alert.alert(
+                    '🛡️ Erro de conexão',
+                    'Não foi possível ativar o Modo Vigilante.'
+                );
+            }
+        } finally {
+            setCheckingVigilante(
+                false
+            );
+        }
+    }
+
+    /**
+     * ============================================================
+     * RECENTRALIZAR / MODO SEGUIR
+     * ============================================================
+     */
+    function handleRecenter() {
+        setFollowEnabled(true);
+        mapRef.current?.centerOnTracker();
+    }
+
+    function handleUserPanned() {
+        setFollowEnabled(false);
+    }
+
+    /**
+     * ============================================================
      * RENDER
      * ============================================================
      */
@@ -769,11 +923,18 @@ export default function MapScreen() {
                 </View>
             ) : location ? (
                 <TrackerMap
+                    ref={mapRef}
                     location={
                         location
                     }
                     routePoints={
                         routePoints
+                    }
+                    followEnabled={
+                        followEnabled
+                    }
+                    onUserPanned={
+                        handleUserPanned
                     }
                 />
             ) : (
@@ -832,6 +993,17 @@ export default function MapScreen() {
                     </View>
                 )}
 
+            {location && (
+                <RecenterButton
+                    followEnabled={
+                        followEnabled
+                    }
+                    onPress={
+                        handleRecenter
+                    }
+                />
+            )}
+
             <MapControls
                 onOpenExternalMap={
                     handleOpenExternalMap
@@ -853,6 +1025,15 @@ export default function MapScreen() {
                 }
                 checkingRealTime={
                     checkingRealTime
+                }
+                vigilanteEnabled={
+                    vigilanteEnabled
+                }
+                onToggleVigilante={
+                    handleToggleVigilante
+                }
+                checkingVigilante={
+                    checkingVigilante
                 }
             />
         </View>
