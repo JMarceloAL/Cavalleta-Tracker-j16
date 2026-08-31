@@ -21,6 +21,8 @@ import {
     type TrackerRoute,
 } from '../../services/storage/RouteHistoryStorage';
 
+import { syncTrackerHistory } from '../../services/TrackerHistorySync';
+
 import type {
     Tracker,
     TrackerLocation,
@@ -66,6 +68,12 @@ export default function History({ navigation }: any) {
 
     const [loadingData, setLoadingData] =
         useState(false);
+
+    // Aviso exibido quando não foi possível sincronizar com o
+    // servidor (API fora do ar) ou quando o rastreador não tem
+    // IMEI cadastrado (nesses casos os dados vêm só do cache local).
+    const [syncError, setSyncError] =
+        useState<string | null>(null);
 
     // ============================================================
     // ESTILOS DINÂMICOS
@@ -151,6 +159,33 @@ export default function History({ navigation }: any) {
     }
 
     // ============================================================
+    // CARREGA APENAS DO CACHE LOCAL
+    // ============================================================
+    //
+    // Usado como fallback quando a sincronização com o servidor
+    // falha, e também como único caminho quando o rastreador não
+    // tem IMEI cadastrado (nesse caso nunca há dado no servidor).
+    //
+
+    async function loadFromLocalCache(tracker: Tracker) {
+        try {
+            const [locationResult, routesResult] =
+                await Promise.all([
+                    getLocationHistory(tracker.id),
+                    getRoutes(tracker.id),
+                ]);
+
+            setHistory(locationResult);
+            setRoutes(routesResult);
+        } catch (error) {
+            console.warn(
+                'Erro ao carregar cache local',
+                error
+            );
+        }
+    }
+
+    // ============================================================
     // SELECIONAR RASTREADOR
     // ============================================================
 
@@ -163,18 +198,45 @@ export default function History({ navigation }: any) {
 
         setLoadingData(true);
 
+        setSyncError(null);
+
+        // Sem IMEI não há como consultar o servidor — usa direto
+        // o cache local, sem tentar a rede.
+        if (!tracker.imei) {
+            setSyncError(
+                'Este rastreador não tem IMEI cadastrado. Mostrando apenas os dados salvos no aparelho.'
+            );
+
+            await loadFromLocalCache(tracker);
+
+            setLoadingData(false);
+
+            return;
+        }
+
         try {
-            const [
-                locationResult,
-                routesResult,
-            ] = await Promise.all([
-                getLocationHistory(tracker.id),
-                getRoutes(tracker.id),
-            ]);
+            // Busca localizações paradas e rotas no servidor e já
+            // sobrescreve o cache local com o resultado.
+            const { locations, routes: syncedRoutes } =
+                await syncTrackerHistory(
+                    tracker.id,
+                    tracker.imei
+                );
 
-            setHistory(locationResult);
+            setHistory(locations);
+            setRoutes(syncedRoutes);
+        } catch (error) {
+            console.warn(
+                'Erro ao sincronizar histórico com o servidor, usando cache local',
+                error
+            );
 
-            setRoutes(routesResult);
+            setSyncError(
+                'Não foi possível atualizar com o servidor. Mostrando dados salvos localmente.'
+            );
+
+            // Fallback: mantém o que já estava salvo localmente.
+            await loadFromLocalCache(tracker);
         } finally {
             setLoadingData(false);
         }
@@ -539,6 +601,27 @@ export default function History({ navigation }: any) {
                         </Text>
 
                     </View>
+
+                    {/* ================================================== */}
+                    {/* AVISO DE SINCRONIZAÇÃO */}
+                    {/* ================================================== */}
+
+                    {syncError && (
+
+                        <Text
+                            style={[
+                                emptyTextStyle,
+                                {
+                                    fontSize: 12,
+                                    marginTop: 4,
+                                    marginBottom: 8,
+                                },
+                            ]}
+                        >
+                            {syncError}
+                        </Text>
+
+                    )}
 
                     {/* ================================================== */}
                     {/* LOADING */}

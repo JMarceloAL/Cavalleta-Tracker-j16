@@ -58,6 +58,32 @@ export async function getLocationHistory(trackerId: string): Promise<TrackerLoca
 }
 
 /**
+ * Sobrescreve todo o histórico de localizações do rastreador com os
+ * dados vindos da API (sincronização servidor -> cache local).
+ *
+ * Diferente de saveLastLocation (que só acrescenta uma nova posição
+ * de cada vez, ignorando duplicatas), essa função substitui o cache
+ * inteiro pelo que o servidor tem, garantindo que o app fique
+ * consistente mesmo se o histórico local estiver desatualizado ou
+ * tiver sido perdido (reinstalação, storage limpo etc.).
+ */
+export async function replaceLocationHistory(
+    trackerId: string,
+    locations: TrackerLocation[]
+): Promise<void> {
+    try {
+        const limited = locations.slice(0, MAX_HISTORY);
+
+        await AsyncStorage.setItem(
+            `${PREFIX}${trackerId}`,
+            JSON.stringify(limited)
+        );
+    } catch (error) {
+        console.warn('Erro ao sincronizar histórico de localizações', error);
+    }
+}
+
+/**
  * Salva a última posição em que o rastreador foi visto "parado"
  * (speed baixo). Serve de referência para o Modo Vigilante detectar
  * quando ele voltar a se mover.

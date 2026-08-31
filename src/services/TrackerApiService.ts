@@ -94,14 +94,6 @@ type ApiGps = {
     dataUTC?: string;
 };
 
-/**
- * Estado de movimento calculado pelo servidor (trackerStore.js).
- *
- * - moving: true enquanto uma rota está em andamento
- * - alarmPending: true quando um alarme (vibração etc.) chegou mas
- *   ainda não foi confirmado por um GPS com velocidade > 0.5km/h
- * - lastMovementAt / lastAlarmAt: timestamps ISO ou null
- */
 export type ApiMovement = {
     moving: boolean;
     alarmPending: boolean;
@@ -120,6 +112,48 @@ export type ApiTracker = {
         serial: string;
     } | null;
     movement?: ApiMovement | null;
+};
+
+/**
+ * ========================================================
+ * HISTÓRICO — LOCALIZAÇÕES PARADAS
+ * ========================================================
+ */
+export type ApiStoppedLocation = ApiGps & {
+    id: string;
+    imei: string;
+    stoppedAt: string;
+};
+
+/**
+ * ========================================================
+ * HISTÓRICO — ROTAS
+ * ========================================================
+ *
+ * O resumo (retornado por /tracker/:imei/routes) não traz os
+ * pontos, só `totalPoints`. Pra ter a linha completa da rota
+ * é preciso buscar o detalhe via fetchRouteDetail.
+ */
+export type ApiRoutePoint = ApiGps & {
+    timestamp: string;
+};
+
+export type ApiRouteSummary = {
+    id: string;
+    imei: string;
+    startedAt: string;
+    finishedAt: string | null;
+    startSource: string;
+    startLocation: ApiGps | null;
+    endLocation: ApiGps | null;
+    distanceKm: number;
+    maxSpeed: number;
+    durationSeconds?: number;
+    totalPoints: number;
+};
+
+export type ApiRouteDetail = Omit<ApiRouteSummary, 'totalPoints'> & {
+    points: ApiRoutePoint[];
 };
 
 export async function fetchAllTrackers(): Promise<ApiTracker[]> {
@@ -174,6 +208,46 @@ export async function fetchTrackerLocationFromApi(
             payload.lastSeen ??
             new Date().toISOString(),
     };
+}
+
+/**
+ * Busca as últimas localizações "paradas" registradas pelo
+ * servidor para o IMEI informado (até 10, mais recente primeiro).
+ */
+export async function fetchStoppedLocations(
+    imei: string
+): Promise<ApiStoppedLocation[]> {
+    const data = await apiFetch(
+        `/tracker/${normalizeImei(imei)}/stopped-locations`
+    );
+
+    return Array.isArray(data?.locations) ? data.locations : [];
+}
+
+/**
+ * Busca o resumo das últimas rotas (até 10, mais recente primeiro).
+ * Não traz os pontos — use fetchRouteDetail para isso.
+ */
+export async function fetchRoutes(
+    imei: string
+): Promise<ApiRouteSummary[]> {
+    const data = await apiFetch(
+        `/tracker/${normalizeImei(imei)}/routes`
+    );
+
+    return Array.isArray(data?.routes) ? data.routes : [];
+}
+
+/**
+ * Busca uma rota específica, com todos os pontos.
+ */
+export async function fetchRouteDetail(
+    imei: string,
+    routeId: string
+): Promise<ApiRouteDetail> {
+    return apiFetch(
+        `/tracker/${normalizeImei(imei)}/routes/${routeId}`
+    );
 }
 
 export async function checkTrackerOnline(

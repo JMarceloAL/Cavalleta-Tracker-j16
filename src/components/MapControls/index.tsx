@@ -1,5 +1,3 @@
-// src/components/MapControls/index.tsx
-
 import React from 'react';
 
 import {
@@ -9,20 +7,13 @@ import {
     ActivityIndicator,
 } from 'react-native';
 
-import {
-    Ionicons,
-} from '@expo/vector-icons';
-
+import { Ionicons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-
 import Octicons from '@expo/vector-icons/Octicons';
 
-import {
-    styles,
-} from './styles';
+import { styles } from './styles';
 
 type Props = {
-
     onOpenExternalMap: () => void;
 
     onShowLastLocation: () => void;
@@ -30,6 +21,10 @@ type Props = {
     onRequestSmsLocation: () => void;
 
     smsLoading: boolean;
+
+    // ============================================================
+    // TEMPO REAL
+    // ============================================================
 
     realTimeEnabled: boolean;
 
@@ -41,11 +36,9 @@ type Props = {
 
     realTimeDisabled?: boolean;
 
-    /**
-     * ========================================================
-     * MODO VIGILANTE
-     * ========================================================
-     */
+    // ============================================================
+    // VIGILANTE
+    // ============================================================
 
     vigilanteEnabled: boolean;
 
@@ -59,66 +52,37 @@ type Props = {
 };
 
 export default function MapControls({
-
     onOpenExternalMap,
-
     onShowLastLocation,
-
     onRequestSmsLocation,
-
     smsLoading,
 
     realTimeEnabled,
-
     onToggleRealTime,
-
     checkingRealTime = false,
-
     realTimeDisabled = false,
 
     vigilanteEnabled,
-
     onToggleVigilante,
-
     checkingVigilante = false,
-
     vigilanteDisabled = false,
-
 }: Props) {
-
     return (
-
-        <View
-            style={
-                styles.container
-            }
-        >
-
+        <View style={styles.container}>
             {/* ==================================================
                 TEMPO REAL
             ================================================== */}
 
-            <View
-                style={
-                    styles.switchWrapper
-                }
-            >
-
+            <View style={styles.switchWrapper}>
                 <Ionicons
-
                     name="radio-outline"
-
                     size={25}
-
                     color={
                         realTimeEnabled
                             ? 'rgb(163, 204, 127)'
                             : '#999'
                     }
-
-                    style={
-                        styles.signalIcon
-                    }
+                    style={styles.signalIcon}
                 />
 
                 {checkingRealTime ? (
@@ -129,26 +93,19 @@ export default function MapControls({
                     />
                 ) : (
                     <Switch
-
-                        style={
-                            styles.switch
-                        }
-
+                        style={styles.switch}
                         value={
                             realTimeEnabled
                         }
-
                         onValueChange={
                             onToggleRealTime
                         }
-
                         disabled={
                             checkingRealTime ||
                             realTimeDisabled
                         }
                     />
                 )}
-
             </View>
 
             {/* ==================================================
@@ -160,22 +117,15 @@ export default function MapControls({
                     styles.vigilanteSwitchWrapper
                 }
             >
-
                 <Ionicons
-
                     name="shield-checkmark-outline"
-
                     size={25}
-
                     color={
                         vigilanteEnabled
                             ? 'rgb(163, 204, 127)'
                             : '#999'
                     }
-
-                    style={
-                        styles.signalIcon
-                    }
+                    style={styles.signalIcon}
                 />
 
                 {checkingVigilante ? (
@@ -186,26 +136,19 @@ export default function MapControls({
                     />
                 ) : (
                     <Switch
-
-                        style={
-                            styles.switch
-                        }
-
+                        style={styles.switch}
                         value={
                             vigilanteEnabled
                         }
-
                         onValueChange={
                             onToggleVigilante
                         }
-
                         disabled={
                             checkingVigilante ||
                             vigilanteDisabled
                         }
                     />
                 )}
-
             </View>
 
             {/* ==================================================
@@ -213,26 +156,17 @@ export default function MapControls({
             ================================================== */}
 
             <TouchableOpacity
-
-                style={
-                    styles.his
-                }
-
+                style={styles.his}
                 onPress={
                     onShowLastLocation
                 }
-
-                activeOpacity={
-                    0.8
-                }
+                activeOpacity={0.8}
             >
-
                 <Octicons
                     name="history"
                     size={24}
                     color="white"
                 />
-
             </TouchableOpacity>
 
             {/* ==================================================
@@ -240,41 +174,25 @@ export default function MapControls({
             ================================================== */}
 
             <TouchableOpacity
-
-                style={
-                    styles.sms
-                }
-
+                style={styles.sms}
                 onPress={
                     onRequestSmsLocation
                 }
-
-                activeOpacity={
-                    0.8
-                }
-
-                disabled={
-                    smsLoading
-                }
+                activeOpacity={0.8}
+                disabled={smsLoading}
             >
-
                 {smsLoading ? (
-
                     <ActivityIndicator
                         size="small"
                         color="#fff"
                     />
-
                 ) : (
-
                     <FontAwesome
                         name="map-marker"
                         size={24}
                         color="white"
                     />
-
                 )}
-
             </TouchableOpacity>
 
             {/* ==================================================
@@ -282,36 +200,22 @@ export default function MapControls({
             ================================================== */}
 
             <TouchableOpacity
-
-                style={
-                    styles.fab
-                }
-
+                style={styles.fab}
                 onPress={
                     onOpenExternalMap
                 }
-
-                activeOpacity={
-                    0.8
-                }
+                activeOpacity={0.8}
             >
-
                 <Ionicons
-
                     name="paper-plane"
-
                     size={24}
-
                     color="white"
-
                     style={{
                         marginRight: 2,
                         marginTop: 3,
                     }}
                 />
-
             </TouchableOpacity>
-
         </View>
     );
 }

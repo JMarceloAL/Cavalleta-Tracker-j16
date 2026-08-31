@@ -1,4 +1,3 @@
-// src/screens/Map/index.tsx
 
 import React, {
     useState,
@@ -26,17 +25,20 @@ import {
 import TrackerMap, {
     type TrackerMapHandle,
 } from '../../components/TrackerMap';
-import TrackerDropdown from '../../components/TrackerDropdown';
-import MapControls from '../../components/MapControls';
-import RecenterButton from '../../components/RecenterButton';
 
-import {
-    useTrackerServiceProvider,
-} from '../../contexts/TrackerServiceContext';
+import TrackerDropdown from '../../components/TrackerDropdown';
+
+import MapControls from '../../components/MapControls';
+
+import RecenterButton from '../../components/RecenterButton';
 
 import {
     useRealTime,
 } from '../../contexts/RealTimeContext';
+
+import {
+    useTrackerServiceProvider,
+} from '../../contexts/TrackerServiceContext';
 
 import {
     requestSmsPermissions,
@@ -67,24 +69,45 @@ const STORAGE_KEY =
     '@cavalleta:trackers';
 
 export default function MapScreen() {
+    // ============================================================
+    // CONTEXT
+    // ============================================================
+
     const {
         isMoving,
         currentTripDistanceKm,
+
         realTimeEnabled:
         globalRealTimeEnabled,
+
         activeTrackerId,
+
         latestLocation,
+
         routePoints,
+
         startRealTime,
+
         stopRealTime,
+
         realTimeError,
 
+        // Vigilante
         vigilanteEnabled:
         globalVigilanteEnabled,
+
+        activeVigilanteTrackerId,
+
         startVigilante,
+
         stopVigilante,
+
         vigilanteError,
     } = useRealTime();
+
+    // ============================================================
+    // NAVEGAÇÃO
+    // ============================================================
 
     const route =
         useRoute<any>();
@@ -92,13 +115,26 @@ export default function MapScreen() {
     const navigation =
         useNavigation<any>();
 
+    // ============================================================
+    // SERVIÇO SMS
+    // ============================================================
+
     const {
         getService,
-    } =
-        useTrackerServiceProvider();
+    } = useTrackerServiceProvider();
+
+    // ============================================================
+    // MAPA
+    // ============================================================
 
     const mapRef =
-        useRef<TrackerMapHandle>(null);
+        useRef<TrackerMapHandle>(
+            null
+        );
+
+    // ============================================================
+    // TRACKERS
+    // ============================================================
 
     const [
         trackers,
@@ -113,6 +149,10 @@ export default function MapScreen() {
             null
         );
 
+    // ============================================================
+    // LOCALIZAÇÃO
+    // ============================================================
+
     const [
         location,
         setLocation,
@@ -121,10 +161,35 @@ export default function MapScreen() {
             null
         );
 
+    // ============================================================
+    // HISTÓRICO
+    // ============================================================
+
+    const [
+        historyRoutePoints,
+        setHistoryRoutePoints,
+    ] =
+        useState<TrackerLocation[]>(
+            []
+        );
+
+    const [
+        isHistoricalRoute,
+        setIsHistoricalRoute,
+    ] = useState(false);
+
+    // ============================================================
+    // LOADING
+    // ============================================================
+
     const [
         loading,
         setLoading,
     ] = useState(true);
+
+    // ============================================================
+    // TEMPO REAL
+    // ============================================================
 
     const [
         realTimeEnabled,
@@ -136,40 +201,37 @@ export default function MapScreen() {
         setCheckingRealTime,
     ] = useState(false);
 
+    // ============================================================
+    // SMS
+    // ============================================================
+
     const [
         smsLoading,
         setSmsLoading,
     ] = useState(false);
 
-    const [
-        vigilanteEnabled,
-        setVigilanteEnabled,
-    ] = useState(false);
+    // ============================================================
+    // VIGILANTE
+    // ============================================================
 
     const [
         checkingVigilante,
         setCheckingVigilante,
     ] = useState(false);
 
-    /**
-     * ============================================================
-     * CENTRALIZAÇÃO / MODO SEGUIR
-     * ============================================================
-     *
-     * true  -> câmera acompanha o rastreador automaticamente
-     * false -> mapa livre (usuário arrastou), marcador se move
-     *          sozinho sem mexer na câmera
-     */
+    // ============================================================
+    // MODO SEGUIR
+    // ============================================================
+
     const [
         followEnabled,
         setFollowEnabled,
     ] = useState(true);
 
-    /**
-     * ============================================================
-     * CARREGAR RASTREADORES
-     * ============================================================
-     */
+    // ============================================================
+    // CARREGAR TRACKERS
+    // ============================================================
+
     const loadTrackers =
         useCallback(
             async () => {
@@ -192,9 +254,7 @@ export default function MapScreen() {
                         route.params
                             ?.trackerId;
 
-                    if (
-                        requestedId
-                    ) {
+                    if (requestedId) {
                         const requested =
                             list.find(
                                 tracker =>
@@ -202,9 +262,7 @@ export default function MapScreen() {
                                     requestedId
                             );
 
-                        if (
-                            requested
-                        ) {
+                        if (requested) {
                             setSelectedTracker(
                                 requested
                             );
@@ -214,24 +272,31 @@ export default function MapScreen() {
                     }
 
                     setSelectedTracker(
-                        prev => {
+                        previous => {
+                            if (!previous) {
+                                return (
+                                    list[0] ??
+                                    null
+                                );
+                            }
+
                             const stillExists =
-                                prev &&
                                 list.find(
                                     tracker =>
                                         tracker.id ===
-                                        prev.id
+                                        previous.id
                                 );
 
-                            return stillExists
-                                ? prev
-                                : list[0] ??
-                                null;
+                            return (
+                                stillExists ??
+                                list[0] ??
+                                null
+                            );
                         }
                     );
                 } catch (error) {
                     console.warn(
-                        'Erro ao carregar rastreadores',
+                        'Erro ao carregar rastreadores:',
                         error
                     );
                 } finally {
@@ -249,11 +314,10 @@ export default function MapScreen() {
         }, [loadTrackers])
     );
 
-    /**
-     * ============================================================
-     * SINCRONIZAR TEMPO REAL DO CONTEXTO
-     * ============================================================
-     */
+    // ============================================================
+    // SINCRONIZA TEMPO REAL
+    // ============================================================
+
     useEffect(() => {
         setRealTimeEnabled(
             globalRealTimeEnabled
@@ -262,24 +326,10 @@ export default function MapScreen() {
         globalRealTimeEnabled,
     ]);
 
-    /**
-     * ============================================================
-     * SINCRONIZAR MODO VIGILANTE DO CONTEXTO
-     * ============================================================
-     */
-    useEffect(() => {
-        setVigilanteEnabled(
-            globalVigilanteEnabled
-        );
-    }, [
-        globalVigilanteEnabled,
-    ]);
+    // ============================================================
+    // ERRO TEMPO REAL
+    // ============================================================
 
-    /**
-     * ============================================================
-     * AVISAR USUÁRIO QUANDO A API CAIR (TEMPO REAL)
-     * ============================================================
-     */
     useEffect(() => {
         if (!realTimeError) {
             return;
@@ -287,20 +337,16 @@ export default function MapScreen() {
 
         Alert.alert(
             '📡 Conexão perdida',
-            realTimeError,
-            [
-                {
-                    text: 'OK',
-                },
-            ]
+            realTimeError
         );
-    }, [realTimeError]);
+    }, [
+        realTimeError,
+    ]);
 
-    /**
-     * ============================================================
-     * AVISAR USUÁRIO QUANDO O MODO VIGILANTE FALHAR
-     * ============================================================
-     */
+    // ============================================================
+    // ERRO VIGILANTE
+    // ============================================================
+
     useEffect(() => {
         if (!vigilanteError) {
             return;
@@ -308,59 +354,78 @@ export default function MapScreen() {
 
         Alert.alert(
             '🛡️ Modo Vigilante',
-            vigilanteError,
-            [
-                {
-                    text: 'OK',
-                },
-            ]
+            vigilanteError
         );
-    }, [vigilanteError]);
+    }, [
+        vigilanteError,
+    ]);
 
-    /**
-     * ============================================================
-     * TROCA DE RASTREADOR
-     * ============================================================
-     */
+    // ============================================================
+    // TROCA DE TRACKER
+    // ============================================================
+
     useEffect(() => {
-        setLocation(null);
+        if (!selectedTracker) {
+            return;
+        }
 
-        /**
-         * Nova seleção -> volta a seguir automaticamente.
-         */
-        setFollowEnabled(true);
+        if (isHistoricalRoute) {
+            return;
+        }
+
+        void getLastLocation(
+            selectedTracker.id
+        ).then(last => {
+            if (last) {
+                setLocation(last);
+            }
+        });
+
+        // --------------------------------------------------------
+        // TEMPO REAL
+        // --------------------------------------------------------
 
         if (
-            selectedTracker?.id !==
-            activeTrackerId &&
-            globalRealTimeEnabled
+            globalRealTimeEnabled &&
+            selectedTracker.id !==
+            activeTrackerId
         ) {
             stopRealTime();
         }
 
+        // --------------------------------------------------------
+        // VIGILANTE
+        // --------------------------------------------------------
+
         if (
-            selectedTracker
+            globalVigilanteEnabled &&
+            selectedTracker.id !==
+            activeVigilanteTrackerId
         ) {
-            getLastLocation(
-                selectedTracker.id
-            ).then(last => {
-                if (last) {
-                    setLocation(last);
-                }
-            });
+            stopVigilante();
         }
 
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        setFollowEnabled(true);
     }, [
         selectedTracker,
+        isHistoricalRoute,
+        globalRealTimeEnabled,
+        activeTrackerId,
+        globalVigilanteEnabled,
+        activeVigilanteTrackerId,
+        stopRealTime,
+        stopVigilante,
     ]);
 
-    /**
-     * ============================================================
-     * LOCALIZAÇÃO DO TEMPO REAL
-     * ============================================================
-     */
+    // ============================================================
+    // LOCALIZAÇÃO DO TEMPO REAL
+    // ============================================================
+
     useEffect(() => {
+        if (isHistoricalRoute) {
+            return;
+        }
+
         if (
             globalRealTimeEnabled &&
             latestLocation &&
@@ -370,133 +435,137 @@ export default function MapScreen() {
             setLocation(
                 latestLocation
             );
-
-            setRealTimeEnabled(
-                true
-            );
         }
     }, [
         latestLocation,
         globalRealTimeEnabled,
         activeTrackerId,
         selectedTracker,
+        isHistoricalRoute,
     ]);
 
-    /**
-     * ============================================================
-     * LOCALIZAÇÃO DO HISTÓRICO
-     * ============================================================
-     */
+    // ============================================================
+    // HISTORY -> LOCATION
+    // ============================================================
+
     useEffect(() => {
         const historyLocation =
             route.params
                 ?.historyLocation;
 
-        if (
+        if (!historyLocation) {
+            return;
+        }
+
+        stopRealTime();
+
+        setRealTimeEnabled(false);
+
+        stopVigilante();
+
+        setHistoryRoutePoints([]);
+
+        setIsHistoricalRoute(false);
+
+        setFollowEnabled(true);
+
+        setLocation(
             historyLocation
-        ) {
-            stopRealTime();
+        );
 
-            setRealTimeEnabled(
-                false
+        navigation.setParams({
+            historyLocation:
+                undefined,
+        });
+    }, [
+        route.params?.historyLocation,
+        navigation,
+        stopRealTime,
+        stopVigilante,
+    ]);
+
+    // ============================================================
+    // HISTORY -> ROUTE
+    // ============================================================
+
+    useFocusEffect(
+        useCallback(() => {
+            const incomingRoute =
+                route.params?.routePoints;
+
+            if (
+                !Array.isArray(incomingRoute) ||
+                incomingRoute.length < 2
+            ) {
+                return;
+            }
+
+            console.log(
+                '[MapScreen] Nova rota histórica recebida:',
+                incomingRoute.length,
+                'pontos'
             );
+
+            // ========================================================
+            // DESLIGA MODOS QUE NÃO PODEM RODAR JUNTO COM HISTÓRICO
+            // ========================================================
+
+            stopRealTime();
+            stopVigilante();
+
+            setRealTimeEnabled(false);
+
+            // ========================================================
+            // DEFINE A ROTA HISTÓRICA
+            // ========================================================
+
+            setHistoryRoutePoints(
+                [...incomingRoute]
+            );
+
+            setIsHistoricalRoute(true);
+
+            // ========================================================
+            // POSIÇÃO FINAL DA ROTA
+            // ========================================================
+
+            const lastPoint =
+                incomingRoute[
+                incomingRoute.length - 1
+                ];
+
+            if (lastPoint) {
+                setLocation(lastPoint);
+            }
+
+            // ========================================================
+            // MAPA LIVRE / SEGUIDOR
+            // ========================================================
 
             setFollowEnabled(true);
 
-            setLocation(
-                historyLocation as TrackerLocation
-            );
+            // ========================================================
+            // CONSUME O PARAMETRO
+            //
+            // Isso é importante para não deixar a mesma rota
+            // pendurada nos params da navegação.
+            // ========================================================
 
             navigation.setParams({
-                historyLocation:
-                    undefined,
+                routePoints: undefined,
             });
-        }
+        }, [
+            route.params?.routePoints,
+            navigation,
+            stopRealTime,
+            stopVigilante,
+        ])
+    );
 
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
-        route.params
-            ?.historyLocation,
-    ]);
+    // ============================================================
+    // MAPA EXTERNO
+    // ============================================================
 
-    /**
-     * ============================================================
-     * ROTA DO HISTÓRICO
-     * ============================================================
-     */
-    useEffect(() => {
-        const historyRoute =
-            route.params
-                ?.routePoints;
-
-        if (
-            historyRoute &&
-            historyRoute.length > 0
-        ) {
-            stopRealTime();
-
-            setRealTimeEnabled(
-                false
-            );
-
-            setFollowEnabled(true);
-
-            /**
-             * Centraliza na última posição
-             * da rota.
-             */
-            setLocation(
-                historyRoute[
-                historyRoute.length - 1
-                ]
-            );
-
-            navigation.setParams({
-                routePoints:
-                    undefined,
-            });
-        }
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
-        route.params
-            ?.routePoints,
-    ]);
-
-    /**
-     * ============================================================
-     * SOLICITAÇÃO AUTOMÁTICA VIA SMS
-     * ============================================================
-     */
-    useEffect(() => {
-        if (
-            route.params
-                ?.autoRequestLocation &&
-            selectedTracker
-        ) {
-            void handleRequestSmsLocation();
-
-            navigation.setParams({
-                autoRequestLocation:
-                    undefined,
-
-                trackerId:
-                    undefined,
-            });
-        }
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
-        selectedTracker,
-        route.params
-            ?.autoRequestLocation,
-    ]);
-
-    /**
-     * ============================================================
-     * MAPA EXTERNO
-     * ============================================================
-     */
     function handleOpenExternalMap() {
         if (!location) {
             Alert.alert(
@@ -513,8 +582,8 @@ export default function MapScreen() {
 
         Linking.openURL(url).catch(
             error => {
-                console.log(
-                    'Erro ao abrir Google Maps:',
+                console.warn(
+                    'Erro ao abrir mapa externo:',
                     error
                 );
 
@@ -526,15 +595,12 @@ export default function MapScreen() {
         );
     }
 
-    /**
-     * ============================================================
-     * ÚLTIMA LOCALIZAÇÃO
-     * ============================================================
-     */
+    // ============================================================
+    // ÚLTIMA LOCALIZAÇÃO
+    // ============================================================
+
     async function handleShowLastLocation() {
-        if (
-            !selectedTracker
-        ) {
+        if (!selectedTracker) {
             Alert.alert(
                 'Aviso',
                 'Selecione um rastreador primeiro.'
@@ -542,6 +608,12 @@ export default function MapScreen() {
 
             return;
         }
+
+        setHistoryRoutePoints([]);
+
+        setIsHistoricalRoute(
+            false
+        );
 
         const last =
             await getLastLocation(
@@ -551,28 +623,35 @@ export default function MapScreen() {
         if (!last) {
             Alert.alert(
                 'Última localização',
-                'Nenhuma localização registrada ainda para este rastreador.'
+                'Nenhuma localização registrada para este rastreador.'
             );
 
             return;
         }
 
         setFollowEnabled(true);
+
         setLocation(last);
     }
 
-    /**
-     * ============================================================
-     * SMS
-     * ============================================================
-     */
+    // ============================================================
+    // SMS
+    // ============================================================
+
     async function handleRequestSmsLocation() {
-        if (
-            !selectedTracker
-        ) {
+        if (!selectedTracker) {
             Alert.alert(
                 'Aviso',
                 'Selecione um rastreador primeiro.'
+            );
+
+            return;
+        }
+
+        if (!selectedTracker.phone) {
+            Alert.alert(
+                'Telefone necessário',
+                'Este rastreador não possui um telefone cadastrado.'
             );
 
             return;
@@ -593,20 +672,27 @@ export default function MapScreen() {
 
             const newLocation:
                 TrackerLocation = {
-                latitude:
-                    reply.latitude,
-
-                longitude:
-                    reply.longitude,
-
+                latitude: Number(reply.latitude),
+                longitude: Number(reply.longitude),
+                speed: Number(
+                    'speed' in reply && reply.speed != null
+                        ? reply.speed
+                        : 0
+                ),
                 lastUpdate:
-                    reply.timestamp,
-
-                speed:
-                    reply.speed,
+                    'timestamp' in reply
+                        ? reply.timestamp
+                        : new Date().toISOString(),
             };
 
+            setHistoryRoutePoints([]);
+
+            setIsHistoricalRoute(
+                false
+            );
+
             setFollowEnabled(true);
+
             setLocation(
                 newLocation
             );
@@ -639,7 +725,7 @@ export default function MapScreen() {
                     'Erro ao buscar localização',
                     error instanceof Error
                         ? error.message
-                        : 'Erro desconhecido'
+                        : 'Não foi possível obter a localização.'
                 );
             }
         } finally {
@@ -647,20 +733,22 @@ export default function MapScreen() {
         }
     }
 
-    /**
-     * ============================================================
-     * TEMPO REAL
-     * ============================================================
-     */
+    // ============================================================
+    // TEMPO REAL
+    // ============================================================
+
     async function handleToggleRealTime(
         value: boolean
     ) {
         if (!value) {
             stopRealTime();
 
-            setRealTimeEnabled(
-                false
-            );
+            setRealTimeEnabled(true);
+
+            // Real Time inicia com o mapa livre.
+            // O acompanhamento só começa quando o usuário
+            // pressionar o botão de recentralizar.
+            setFollowEnabled(false);
 
             return;
         }
@@ -677,15 +765,17 @@ export default function MapScreen() {
         if (!selectedTracker.imei) {
             Alert.alert(
                 'IMEI necessário',
-                'O tempo real usa a API do servidor, que exige o IMEI do rastreador cadastrado. Edite o rastreador na tela Início e adicione o IMEI.'
+                'O Tempo Real precisa do IMEI do rastreador.'
             );
 
             return;
         }
 
-        setCheckingRealTime(
-            true
-        );
+        setHistoryRoutePoints([]);
+
+        setIsHistoricalRoute(false);
+
+        setCheckingRealTime(true);
 
         try {
             const result =
@@ -704,8 +794,8 @@ export default function MapScreen() {
                 );
 
                 Alert.alert(
-                    '📡 Sem conexão com o servidor',
-                    'Não foi possível conectar à API do rastreador. Verifique a conexão do servidor e tente novamente.'
+                    '📡 Sem conexão',
+                    'Não foi possível conectar ao servidor.'
                 );
 
                 return;
@@ -723,12 +813,10 @@ export default function MapScreen() {
                     false
                 );
 
-                if (!realTimeError) {
-                    Alert.alert(
-                        '📡 Erro de conexão',
-                        'Não foi possível iniciar o Tempo Real.'
-                    );
-                }
+                Alert.alert(
+                    '📡 Erro',
+                    'Não foi possível iniciar o Tempo Real.'
+                );
 
                 return;
             }
@@ -737,7 +825,9 @@ export default function MapScreen() {
                 true
             );
 
-            setFollowEnabled(true);
+            setFollowEnabled(
+                true
+            );
 
             if (
                 result.status ===
@@ -795,10 +885,10 @@ export default function MapScreen() {
             }
 
             Alert.alert(
-                'Erro no tempo real',
+                'Erro no Tempo Real',
                 error instanceof Error
                     ? error.message
-                    : 'Não foi possível ativar o tempo real.'
+                    : 'Não foi possível ativar o Tempo Real.'
             );
         } finally {
             setCheckingRealTime(
@@ -807,23 +897,26 @@ export default function MapScreen() {
         }
     }
 
-    /**
-     * ============================================================
-     * MODO VIGILANTE
-     * ============================================================
-     */
+    // ============================================================
+    // MODO VIGILANTE
+    // ============================================================
+
     async function handleToggleVigilante(
         value: boolean
     ) {
+        // --------------------------------------------------------
+        // DESLIGAR
+        // --------------------------------------------------------
+
         if (!value) {
             stopVigilante();
 
-            setVigilanteEnabled(
-                false
-            );
-
             return;
         }
+
+        // --------------------------------------------------------
+        // TRACKER
+        // --------------------------------------------------------
 
         if (!selectedTracker) {
             Alert.alert(
@@ -834,14 +927,22 @@ export default function MapScreen() {
             return;
         }
 
+        // --------------------------------------------------------
+        // IMEI
+        // --------------------------------------------------------
+
         if (!selectedTracker.imei) {
             Alert.alert(
                 'IMEI necessário',
-                'O Modo Vigilante usa a API do servidor, que exige o IMEI do rastreador cadastrado. Edite o rastreador na tela Início e adicione o IMEI.'
+                'O Modo Vigilante precisa do IMEI do rastreador.'
             );
 
             return;
         }
+
+        // --------------------------------------------------------
+        // NOTIFICAÇÕES
+        // --------------------------------------------------------
 
         const granted =
             await requestNotificationPermissions();
@@ -867,16 +968,32 @@ export default function MapScreen() {
                     selectedTracker.imei
                 );
 
-            setVigilanteEnabled(
-                started
-            );
-
-            if (!started && !vigilanteError) {
+            if (!started) {
                 Alert.alert(
                     '🛡️ Erro de conexão',
                     'Não foi possível ativar o Modo Vigilante.'
                 );
+
+                return;
             }
+
+            /*
+             * O estado verdadeiro vem do Context.
+             *
+             * Não usamos mais setVigilanteEnabled()
+             * localmente.
+             */
+            setFollowEnabled(true);
+        } catch (error) {
+            console.warn(
+                'Erro ao iniciar Modo Vigilante:',
+                error
+            );
+
+            Alert.alert(
+                '🛡️ Erro',
+                'Não foi possível ativar o Modo Vigilante.'
+            );
         } finally {
             setCheckingVigilante(
                 false
@@ -884,25 +1001,37 @@ export default function MapScreen() {
         }
     }
 
-    /**
-     * ============================================================
-     * RECENTRALIZAR / MODO SEGUIR
-     * ============================================================
-     */
+    // ============================================================
+    // RECENTRALIZAR
+    // ============================================================
+
     function handleRecenter() {
         setFollowEnabled(true);
+
         mapRef.current?.centerOnTracker();
     }
+
+    // ============================================================
+    // USUÁRIO ARRASTOU MAPA
+    // ============================================================
 
     function handleUserPanned() {
         setFollowEnabled(false);
     }
 
-    /**
-     * ============================================================
-     * RENDER
-     * ============================================================
-     */
+    // ============================================================
+    // ROTA EXIBIDA
+    // ============================================================
+
+    const displayedRoutePoints =
+        isHistoricalRoute
+            ? historyRoutePoints
+            : routePoints;
+
+    // ============================================================
+    // RENDER
+    // ============================================================
+
     return (
         <View
             style={{
@@ -924,11 +1053,9 @@ export default function MapScreen() {
             ) : location ? (
                 <TrackerMap
                     ref={mapRef}
-                    location={
-                        location
-                    }
+                    location={location}
                     routePoints={
-                        routePoints
+                        displayedRoutePoints
                     }
                     followEnabled={
                         followEnabled
@@ -955,16 +1082,18 @@ export default function MapScreen() {
                         }}
                     >
                         {selectedTracker
-                            ? 'Nenhuma localização recebida ainda. O tempo real continuará tentando obter a localização.'
+                            ? 'Nenhuma localização recebida ainda.'
                             : 'Nenhum rastreador cadastrado.'}
                     </Text>
                 </View>
             )}
 
+            {/* ==================================================
+                DROPDOWN
+            ================================================== */}
+
             <TrackerDropdown
-                trackers={
-                    trackers
-                }
+                trackers={trackers}
                 selectedTracker={
                     selectedTracker
                 }
@@ -973,7 +1102,12 @@ export default function MapScreen() {
                 }
             />
 
+            {/* ==================================================
+                DISTÂNCIA
+            ================================================== */}
+
             {realTimeEnabled &&
+                !isHistoricalRoute &&
                 isMoving && (
                     <View
                         style={
@@ -993,6 +1127,10 @@ export default function MapScreen() {
                     </View>
                 )}
 
+            {/* ==================================================
+                RECENTRALIZAR
+            ================================================== */}
+
             {location && (
                 <RecenterButton
                     followEnabled={
@@ -1004,36 +1142,57 @@ export default function MapScreen() {
                 />
             )}
 
+            {/* ==================================================
+                CONTROLES
+            ================================================== */}
+
             <MapControls
                 onOpenExternalMap={
                     handleOpenExternalMap
                 }
+
                 onShowLastLocation={
                     handleShowLastLocation
                 }
+
                 onRequestSmsLocation={
                     handleRequestSmsLocation
                 }
+
                 smsLoading={
                     smsLoading
                 }
+
                 realTimeEnabled={
                     realTimeEnabled
                 }
+
                 onToggleRealTime={
                     handleToggleRealTime
                 }
+
                 checkingRealTime={
                     checkingRealTime
                 }
-                vigilanteEnabled={
-                    vigilanteEnabled
+
+                realTimeDisabled={
+                    false
                 }
+
+                vigilanteEnabled={
+                    globalVigilanteEnabled
+                }
+
                 onToggleVigilante={
                     handleToggleVigilante
                 }
+
                 checkingVigilante={
                     checkingVigilante
+                }
+
+                vigilanteDisabled={
+                    false
                 }
             />
         </View>

@@ -154,3 +154,41 @@ export async function clearTrackerRoutes(
         console.warn('Erro ao limpar rotas:', error);
     }
 }
+
+/**
+ * Sobrescreve todas as rotas de um rastreador com os dados vindos
+ * da API (sincronização servidor -> cache local).
+ *
+ * Remove as rotas antigas desse trackerId do cache e insere as
+ * novas no lugar — as rotas de OUTROS rastreadores no mesmo
+ * arquivo (STORAGE_KEY é compartilhado entre todos) não são
+ * tocadas.
+ */
+export async function replaceTrackerRoutes(
+    trackerId: string,
+    routes: TrackerRoute[]
+): Promise<void> {
+    try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+
+        const allRoutes: TrackerRoute[] = stored
+            ? JSON.parse(stored)
+            : [];
+
+        const otherTrackersRoutes = allRoutes.filter(
+            route => route.trackerId !== trackerId
+        );
+
+        const nextAllRoutes = [
+            ...routes,
+            ...otherTrackersRoutes,
+        ];
+
+        await AsyncStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(nextAllRoutes)
+        );
+    } catch (error) {
+        console.warn('Erro ao sincronizar rotas:', error);
+    }
+}

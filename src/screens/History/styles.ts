@@ -29,6 +29,36 @@ export const styles = StyleSheet.create({
     darkTitle: {
         color: '#F3F4F6',
     },
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    refreshButton: {
+        padding: 6,
+    },
+    syncWarning: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FEF3E2',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        marginBottom: 10,
+    },
+    darkSyncWarning: {
+        backgroundColor: '#3A2E1B',
+    },
+    syncWarningText: {
+        fontSize: 11,
+        color: '#B45309',
+        marginLeft: 6,
+        flex: 1,
+    },
+    darkSyncWarningText: {
+        color: '#F3B25C',
+    },
 
     // ============================================================
     // DROPDOWN

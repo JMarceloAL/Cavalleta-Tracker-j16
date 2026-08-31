@@ -1,3 +1,5 @@
+
+//trackermap styles.ts
 import {
     StyleSheet,
 } from 'react-native';
