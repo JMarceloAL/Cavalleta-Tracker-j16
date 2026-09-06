@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { APP_GREEN } from '../../../theme/colors';
 
 export const styles = StyleSheet.create({
     overlay: {
@@ -44,7 +45,7 @@ export const styles = StyleSheet.create({
         marginBottom: 20,
     },
     primaryButton: {
-        backgroundColor: 'rgb(163, 204, 127)',
+        backgroundColor: APP_GREEN,
         height: 45,
         borderRadius: 8,
         justifyContent: 'center',
@@ -67,7 +68,7 @@ export const styles = StyleSheet.create({
     },
     secondaryButton: {
         borderWidth: 1,
-        borderColor: 'rgb(163, 204, 127)',
+        borderColor: APP_GREEN,
         borderRadius: 8,
         paddingVertical: 12,
         alignItems: 'center',
@@ -77,7 +78,7 @@ export const styles = StyleSheet.create({
         opacity: 0.6,
     },
     secondaryButtonText: {
-        color: 'rgb(163, 204, 127)',
+        color: APP_GREEN,
         fontWeight: '600',
         fontSize: 14,
     },

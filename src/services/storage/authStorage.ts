@@ -1,5 +1,17 @@
 // Importa o AsyncStorage.
+//authStorage.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// SecureStore é opcional: carregamos dinamicamente para evitar crash quando
+// o pacote não estiver instalado no ambiente do desenvolvedor.
+let SecureStore: typeof import('expo-secure-store') | null = null;
+try {
+    // require em vez de import estático para não falhar na inicialização
+    // quando o pacote não estiver presente.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment
+    SecureStore = require('expo-secure-store');
+} catch (e) {
+    SecureStore = null;
+}
 
 /*
     Chave utilizada para armazenar
@@ -7,6 +19,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 */
 const SESSION_KEY = '@cavalleta:session';
 const CREDENTIALS_KEY = '@cavalleta:credentials';
+// SecureStore keys must only contain alphanumeric, '.', '-', '_'
+const SECURE_CREDENTIALS_KEY = 'cavalleta_secure_credentials';
+const BIOMETRIC_KEY = 'cavalleta_biometric_enabled';
+
+/*
+    Se o app já perguntou ao usuário (uma única vez) se ele queria
+    ativar a biometria. Independente da resposta (sim ou não), uma
+    vez perguntado, nunca mais deve perguntar de novo.
+*/
+const BIOMETRIC_PROMPTED_KEY = 'cavalleta_biometric_prompted';
 
 export type StoredCredentials = {
     username: string;
@@ -45,7 +67,67 @@ export async function saveCredentials(username: string, password: string): Promi
     await AsyncStorage.setItem(CREDENTIALS_KEY, JSON.stringify(payload));
 }
 
+export async function saveCredentialsSecure(username: string, password: string): Promise<void> {
+    const payload: StoredCredentials = {
+        username: username.trim(),
+        password: password.trim(),
+    };
+
+    // Save to SecureStore
+    try {
+        if (SecureStore && SecureStore.setItemAsync) {
+            await SecureStore.setItemAsync(SECURE_CREDENTIALS_KEY, JSON.stringify(payload));
+        }
+    } catch (error) {
+        console.warn('Não foi possível salvar credenciais no SecureStore:', error);
+    }
+
+    // Also save in AsyncStorage for backward compatibility
+    await AsyncStorage.setItem(CREDENTIALS_KEY, JSON.stringify(payload));
+}
+
+export async function setBiometricEnabled(enabled: boolean): Promise<void> {
+    await AsyncStorage.setItem(BIOMETRIC_KEY, enabled ? 'true' : 'false');
+}
+
+export async function getBiometricEnabled(): Promise<boolean> {
+    const v = await AsyncStorage.getItem(BIOMETRIC_KEY);
+    return v === 'true';
+}
+
+/*
+    Marca que o app já perguntou ao usuário se ele queria ativar
+    a biometria. Chamado logo antes de mostrar o Alert, para que
+    mesmo se o app fechar no meio do diálogo, a pergunta não seja
+    repetida na próxima abertura.
+*/
+export async function setBiometricPrompted(): Promise<void> {
+    await AsyncStorage.setItem(BIOMETRIC_PROMPTED_KEY, 'true');
+}
+
+export async function hasPromptedBiometric(): Promise<boolean> {
+    const v = await AsyncStorage.getItem(BIOMETRIC_PROMPTED_KEY);
+    return v === 'true';
+}
+
 export async function getCredentials(): Promise<StoredCredentials> {
+    // Prefer secure credentials when available
+    try {
+        if (SecureStore && SecureStore.getItemAsync) {
+            const secureRaw = await SecureStore.getItemAsync(SECURE_CREDENTIALS_KEY);
+            if (secureRaw) {
+                const parsed = JSON.parse(secureRaw) as Partial<StoredCredentials>;
+                return {
+                    username: parsed.username?.trim() || 'root',
+                    password: parsed.password?.trim() || 'root',
+                };
+            }
+        }
+    } catch (error) {
+        console.warn('Erro ao ler credenciais seguras:', error);
+    }
+
+    // Fallback to AsyncStorage
     const raw = await AsyncStorage.getItem(CREDENTIALS_KEY);
 
     if (!raw) {

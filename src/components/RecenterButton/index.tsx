@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { APP_GREEN, APP_GREEN_DARK } from '../../theme/colors';
 import { styles } from './styles';
 
 type Props = {
@@ -23,12 +24,21 @@ export default function RecenterButton({
                 styles.button,
                 {
                     backgroundColor: followEnabled
-                        ? 'rgb(163, 204, 127)'
+                        ? APP_GREEN
                         : '#FFFFFF',
+                    borderColor: followEnabled
+                        ? APP_GREEN_DARK
+                        : '#DDE9D2',
+                    shadowColor: followEnabled
+                        ? `${APP_GREEN}55`
+                        : 'rgba(15, 23, 42, 0.12)',
+                    shadowOpacity: followEnabled ? 0.3 : 0.2,
+                    shadowRadius: followEnabled ? 9 : 7,
+                    elevation: followEnabled ? 5 : 4,
                 },
             ]}
             onPress={onPress}
-            activeOpacity={0.85}
+            activeOpacity={0.9}
         >
             <Ionicons
                 name={
@@ -39,8 +49,8 @@ export default function RecenterButton({
                 size={22}
                 color={
                     followEnabled
-                        ? '#FFFFFF'
-                        : 'rgb(163, 204, 127)'
+                        ? '#F7FFF3'
+                        : APP_GREEN
                 }
             />
         </TouchableOpacity>

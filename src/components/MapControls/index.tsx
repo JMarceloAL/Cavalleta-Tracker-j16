@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Octicons from '@expo/vector-icons/Octicons';
 
+import { useTheme } from '../../contexts/ThemeContext';
 import { styles } from './styles';
 
 type Props = {
@@ -67,6 +68,10 @@ export default function MapControls({
     checkingVigilante = false,
     vigilanteDisabled = false,
 }: Props) {
+    const { colors } = useTheme();
+
+    const primaryButtonStyle = { backgroundColor: colors.primary };
+
     return (
         <View style={styles.container}>
             {/* ==================================================
@@ -79,7 +84,7 @@ export default function MapControls({
                     size={25}
                     color={
                         realTimeEnabled
-                            ? 'rgb(163, 204, 127)'
+                            ? colors.primary
                             : '#999'
                     }
                     style={styles.signalIcon}
@@ -88,7 +93,7 @@ export default function MapControls({
                 {checkingRealTime ? (
                     <ActivityIndicator
                         size="small"
-                        color="rgb(163, 204, 127)"
+                        color={colors.primary}
                         style={styles.switch}
                     />
                 ) : (
@@ -122,7 +127,7 @@ export default function MapControls({
                     size={25}
                     color={
                         vigilanteEnabled
-                            ? 'rgb(163, 204, 127)'
+                            ? colors.primary
                             : '#999'
                     }
                     style={styles.signalIcon}
@@ -131,7 +136,7 @@ export default function MapControls({
                 {checkingVigilante ? (
                     <ActivityIndicator
                         size="small"
-                        color="rgb(163, 204, 127)"
+                        color={colors.primary}
                         style={styles.switch}
                     />
                 ) : (
@@ -156,7 +161,7 @@ export default function MapControls({
             ================================================== */}
 
             <TouchableOpacity
-                style={styles.his}
+                style={[styles.his, primaryButtonStyle]}
                 onPress={
                     onShowLastLocation
                 }
@@ -174,7 +179,7 @@ export default function MapControls({
             ================================================== */}
 
             <TouchableOpacity
-                style={styles.sms}
+                style={[styles.sms, primaryButtonStyle]}
                 onPress={
                     onRequestSmsLocation
                 }
@@ -200,7 +205,7 @@ export default function MapControls({
             ================================================== */}
 
             <TouchableOpacity
-                style={styles.fab}
+                style={[styles.fab, primaryButtonStyle]}
                 onPress={
                     onOpenExternalMap
                 }

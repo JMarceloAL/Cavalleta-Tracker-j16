@@ -13,11 +13,11 @@ export const styles = StyleSheet.create({
     title: {
         fontSize: 32,
         fontWeight: 'bold',
-        color: 'rgb(163, 204, 127)',
+        color: '#1D2A1A',
         textAlign: 'center',
     },
     darkTitle: {
-        color: '#A3CC7F',
+        color: '#F3F4F6',
     },
     subtitle: {
         fontSize: 16,
@@ -72,7 +72,6 @@ export const styles = StyleSheet.create({
         color: '#F3F4F6',
     },
     button: {
-        backgroundColor: 'rgb(163, 204, 127)',
         height: 50,
         borderRadius: 10,
         justifyContent: 'center',
@@ -84,4 +83,12 @@ export const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 16,
     },
+    biometricButton: {
+        alignSelf: 'center',
+        marginVertical: 12,
+        padding: 10,
+        borderRadius: 40,
+        borderWidth: 2,
+    },
+
 });

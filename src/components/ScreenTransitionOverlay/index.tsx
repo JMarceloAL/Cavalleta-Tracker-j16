@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { styles } from './styles';
+import { APP_GREEN } from '../../theme/colors';
 
 type Props = {
     visible: boolean;
@@ -12,8 +13,7 @@ export default function ScreenTransitionOverlay({ visible }: Props) {
 
     return (
         <View style={styles.overlay} pointerEvents="none">
-            <ActivityIndicator size="large" color="rgb(163, 204, 127)" />
+            <ActivityIndicator size="large" color={APP_GREEN} />
         </View>
     );
 }
-

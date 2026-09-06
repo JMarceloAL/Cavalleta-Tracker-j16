@@ -1,9 +1,11 @@
 import { StyleSheet } from 'react-native';
 
+import { APP_GREEN } from '../../theme/colors';
+
 export const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F7F2',
+        backgroundColor: '#F3F6EF',
     },
     darkContainer: {
         backgroundColor: '#121821',
@@ -11,14 +13,18 @@ export const styles = StyleSheet.create({
 
     header: {
         paddingHorizontal: 20,
-        paddingTop: 24,
-        paddingBottom: 16,
+        paddingTop: 32,
+        paddingBottom: 18,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#EAF0E5',
+        backgroundColor: '#F9FBF7',
     },
     darkHeader: {
         backgroundColor: '#121821',
+        borderBottomColor: '#2E3B4D',
     },
 
     headerTextGroup: {
@@ -27,21 +33,21 @@ export const styles = StyleSheet.create({
     },
 
     title: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: '800',
         color: '#1F241C',
-        letterSpacing: -0.3,
+        letterSpacing: -0.5,
     },
     darkTitle: {
         color: '#F3F4F6',
     },
 
     subtitle: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '700',
         color: '#75806D',
-        letterSpacing: 0.4,
-        marginTop: 4,
+        letterSpacing: 0.5,
+        marginTop: 6,
         textTransform: 'uppercase',
     },
     darkSubtitle: {
@@ -51,15 +57,15 @@ export const styles = StyleSheet.create({
     addButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgb(163, 204, 127)',
-        borderRadius: 22,
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOpacity: 0.12,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
+        backgroundColor: APP_GREEN,
+        borderRadius: 18,
+        paddingVertical: 12,
+        paddingHorizontal: 18,
+        elevation: 4,
+        shadowColor: `${APP_GREEN}66`,
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 5 },
     },
 
     addButtonText: {
@@ -71,7 +77,8 @@ export const styles = StyleSheet.create({
 
     listContent: {
         paddingHorizontal: 20,
-        paddingBottom: 24,
+        paddingTop: 16,
+        paddingBottom: 28,
         flexGrow: 1,
     },
 

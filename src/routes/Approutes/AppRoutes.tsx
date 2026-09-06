@@ -5,7 +5,8 @@ import React, {
     useState,
 } from 'react';
 
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Responsável pela navegação.
 import { NavigationContainer } from '@react-navigation/native';
@@ -28,6 +29,16 @@ export default function AppRoutes() {
     // Controla o overlay de transição entre telas.
     const [transitioning, setTransitioning] = useState(false);
 
+    const { isReady } = useTheme();
+
+    if (!isReady) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#56AC00" />
+            </View>
+        );
+    }
+
     /*
         Chamado pelo NavigationContainer toda vez que o estado
         de navegação muda (troca de tela em qualquer nível).
@@ -45,6 +56,10 @@ export default function AppRoutes() {
                 initialRouteName="Login"
                 screenOptions={{
                     headerShown: false,
+                    gestureEnabled: true,
+                    fullScreenGestureEnabled: true,
+                    animation: 'slide_from_right',
+                    animationTypeForReplace: 'push',
                 }}
             >
 
@@ -67,3 +82,12 @@ export default function AppRoutes() {
     );
 
 }
+
+const styles = StyleSheet.create({
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFFFFF',
+    },
+});

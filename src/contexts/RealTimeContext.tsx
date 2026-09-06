@@ -95,6 +95,8 @@ const MOVEMENT_DISTANCE_METERS = 10;
 
 const MOVEMENT_SPEED_KMH = 3;
 
+const RECENT_ROUTE_WINDOW_MS = 10 * 60 * 1000;
+
 // ============================================================
 // DISTÂNCIA
 // ============================================================
@@ -137,6 +139,76 @@ function calculateDistanceKm(
         );
 
     return earthRadiusKm * c;
+}
+
+function resolveVigilanteState(
+    tracker: {
+        movement?: {
+            moving?: boolean;
+            alarmPending?: boolean;
+        } | null;
+        gps?: {
+            velocidade?: number | null;
+            latitude?: number | null;
+            longitude?: number | null;
+        } | null;
+        routes?: Array<{
+            startSource?: string | null;
+            startedAt?: string | null;
+        }> | null;
+    },
+    previousLocation: TrackerLocation | null
+): {
+    moving: boolean;
+    alarmPending: boolean;
+} {
+    const movement = tracker.movement;
+    const gps = tracker.gps;
+    const speedKmh = Number(gps?.velocidade ?? 0);
+
+    const latestRoute =
+        Array.isArray(tracker.routes) &&
+            tracker.routes.length > 0
+            ? tracker.routes[0]
+            : null;
+
+    const hasRecentAlarmRoute =
+        !!latestRoute &&
+        latestRoute.startSource === 'ALARM_AND_SPEED' &&
+        !!latestRoute.startedAt &&
+        Date.now() - Date.parse(latestRoute.startedAt) <= RECENT_ROUTE_WINDOW_MS;
+
+    let moving =
+        movement?.moving ??
+        speedKmh > MOVEMENT_SPEED_KMH;
+
+    if (
+        !movement?.moving &&
+        previousLocation &&
+        typeof gps?.latitude === 'number' &&
+        typeof gps?.longitude === 'number'
+    ) {
+        const distanceKm = calculateDistanceKm(
+            previousLocation,
+            {
+                latitude: gps.latitude,
+                longitude: gps.longitude,
+                speed: speedKmh,
+                lastUpdate: new Date().toISOString(),
+            }
+        );
+
+        moving = moving || distanceKm * 1000 > MOVEMENT_DISTANCE_METERS;
+    }
+
+    const alarmPending =
+        movement?.alarmPending ??
+        hasRecentAlarmRoute;
+
+    return {
+        moving,
+        alarmPending,
+    };
 }
 
 // ============================================================
@@ -645,6 +717,9 @@ export function RealTimeProvider({
     const vigilanteAlarmRef =
         useRef(false);
 
+    const vigilantePreviousLocationRef =
+        useRef<TrackerLocation | null>(null);
+
     // ============================================================
     // LIMPAR VIGILANTE
     // ============================================================
@@ -705,34 +780,50 @@ export function RealTimeProvider({
                     return;
                 }
 
-                const movement =
-                    tracker.movement;
+                const status = resolveVigilanteState(
+                    tracker,
+                    vigilantePreviousLocationRef.current
+                );
 
-                if (movement) {
-                    if (
-                        movement.moving &&
-                        !vigilanteMovingRef.current
-                    ) {
-                        void sendMovementNotification(
-                            vigilanteTrackerNameRef.current
-                        );
-                    }
+                if (
+                    status.moving &&
+                    !vigilanteMovingRef.current
+                ) {
+                    void sendMovementNotification(
+                        vigilanteTrackerNameRef.current
+                    );
+                }
 
-                    if (
-                        movement.alarmPending &&
-                        !vigilanteAlarmRef.current
-                    ) {
-                        void sendAlarmNotification(
-                            vigilanteTrackerNameRef.current,
-                            'Possível alarme detectado no rastreador'
-                        );
-                    }
+                if (
+                    status.alarmPending &&
+                    !vigilanteAlarmRef.current
+                ) {
+                    void sendAlarmNotification(
+                        vigilanteTrackerNameRef.current,
+                        'Possível alarme detectado no rastreador'
+                    );
+                }
 
-                    vigilanteMovingRef.current =
-                        movement.moving;
+                vigilanteMovingRef.current =
+                    status.moving;
 
-                    vigilanteAlarmRef.current =
-                        movement.alarmPending;
+                vigilanteAlarmRef.current =
+                    status.alarmPending;
+
+                if (
+                    tracker.gps &&
+                    typeof tracker.gps.latitude === 'number' &&
+                    typeof tracker.gps.longitude === 'number'
+                ) {
+                    vigilantePreviousLocationRef.current = {
+                        latitude: tracker.gps.latitude,
+                        longitude: tracker.gps.longitude,
+                        speed: Number(tracker.gps.velocidade ?? 0),
+                        lastUpdate:
+                            tracker.gps.dataUTC ??
+                            tracker.gps.data ??
+                            new Date().toISOString(),
+                    };
                 }
             } catch (error) {
                 console.warn(
@@ -821,21 +912,32 @@ export function RealTimeProvider({
                         return false;
                     }
 
-                    /*
-                     * Guarda o estado inicial.
-                     *
-                     * Isso impede que uma notificação seja
-                     * disparada imediatamente caso o veículo
-                     * já esteja em movimento quando o Vigilante
-                     * for ativado.
-                     */
+                    const initialStatus = resolveVigilanteState(
+                        tracker,
+                        vigilantePreviousLocationRef.current
+                    );
+
                     vigilanteMovingRef.current =
-                        tracker.movement?.moving ??
-                        false;
+                        initialStatus.moving;
 
                     vigilanteAlarmRef.current =
-                        tracker.movement?.alarmPending ??
-                        false;
+                        initialStatus.alarmPending;
+
+                    if (
+                        tracker.gps &&
+                        typeof tracker.gps.latitude === 'number' &&
+                        typeof tracker.gps.longitude === 'number'
+                    ) {
+                        vigilantePreviousLocationRef.current = {
+                            latitude: tracker.gps.latitude,
+                            longitude: tracker.gps.longitude,
+                            speed: Number(tracker.gps.velocidade ?? 0),
+                            lastUpdate:
+                                tracker.gps.dataUTC ??
+                                tracker.gps.data ??
+                                new Date().toISOString(),
+                        };
+                    }
 
                     setVigilanteEnabledState(
                         true
@@ -904,6 +1006,9 @@ export function RealTimeProvider({
 
             vigilanteCheckingRef.current =
                 false;
+
+            vigilantePreviousLocationRef.current =
+                null;
 
             setVigilanteEnabledState(
                 false

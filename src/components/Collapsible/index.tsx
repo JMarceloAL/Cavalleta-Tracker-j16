@@ -1,6 +1,6 @@
 // src/components/Collapsible/index.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { Animated, View, LayoutChangeEvent, StyleSheet } from 'react-native';
+import { Animated, View, LayoutChangeEvent, Easing } from 'react-native';
 
 import { styles } from './styles';
 
@@ -24,29 +24,37 @@ export default function Collapsible({ open, children }: Props) {
     useEffect(() => {
         if (measuredHeight === null) return;
 
+        const duration = 180;
+
         Animated.parallel([
             Animated.timing(heightAnim, {
                 toValue: open ? measuredHeight : 0,
-                duration: 350,
+                duration,
+                easing: Easing.out(Easing.cubic),
                 useNativeDriver: false,
             }),
             Animated.timing(opacityAnim, {
                 toValue: open ? 1 : 0,
-                duration: open ? 300 : 180,
+                duration: open ? duration : duration - 40,
+                easing: Easing.out(Easing.cubic),
                 useNativeDriver: false,
             }),
         ]).start();
-    }, [open, measuredHeight]);
+    }, [open, measuredHeight, heightAnim, opacityAnim]);
 
     return (
         <View>
-            {/* Medidor invisível: renderiza o conteúdo fora da tela só pra saber a altura real */}
             <View style={styles.measure} pointerEvents="none">
                 <View onLayout={handleContentLayout}>{children}</View>
             </View>
 
-            {/* Conteúdo visível, com altura e opacidade animadas suavemente */}
-            <Animated.View style={{ height: heightAnim, opacity: opacityAnim, overflow: 'hidden' }}>
+            <Animated.View
+                style={{
+                    height: heightAnim,
+                    opacity: opacityAnim,
+                    overflow: 'hidden',
+                }}
+            >
                 {children}
             </Animated.View>
         </View>

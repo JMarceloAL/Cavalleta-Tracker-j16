@@ -36,7 +36,7 @@ export default function PasswordConfirmModal({
     title = 'Área protegida',
     subtitle = 'Digite a senha do app para continuar.',
 }: Props) {
-    const { isDark } = useTheme();
+    const { isDark, colors } = useTheme();
 
     const [password, setPassword] = useState('');
     const [checking, setChecking] = useState(false);
@@ -83,6 +83,7 @@ export default function PasswordConfirmModal({
     const subtitleStyle = [styles.subtitle, isDark && styles.darkSubtitle];
     const inputStyle = [styles.input, isDark && styles.darkInput];
     const cancelTextStyle = [styles.cancelButtonText, isDark && styles.darkCancelButtonText];
+    const primaryButtonStyle = [styles.primaryButton, { backgroundColor: colors.primary }];
 
     return (
         <Modal visible={visible} transparent animationType="fade">
@@ -92,7 +93,7 @@ export default function PasswordConfirmModal({
                         <MaterialIcons
                             name="lock-outline"
                             size={26}
-                            color="rgb(110, 148, 80)"
+                            color={colors.primary}
                         />
                     </View>
 
@@ -112,7 +113,7 @@ export default function PasswordConfirmModal({
                     />
 
                     <TouchableOpacity
-                        style={styles.primaryButton}
+                        style={primaryButtonStyle}
                         onPress={handleConfirm}
                         disabled={checking}
                     >

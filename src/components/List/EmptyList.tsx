@@ -12,12 +12,12 @@ interface Props {
 }
 
 export default function EmptyList({ onAdd }: Props) {
-    const { isDark } = useTheme();
+    const { isDark, colors } = useTheme();
 
     return (
         <View style={[styles.container, isDark && styles.darkContainer]}>
             <View style={[styles.iconCircle, isDark && styles.darkIconCircle]}>
-                <MaterialIcons name="add-location-alt" size={32} color="rgb(163, 204, 127)" />
+                <MaterialIcons name="add-location-alt" size={32} color={colors.primary} />
             </View>
 
             <Text style={[styles.title, isDark && styles.darkTitle]}>Nenhum rastreador cadastrado</Text>
@@ -26,7 +26,11 @@ export default function EmptyList({ onAdd }: Props) {
             </Text>
 
             {onAdd && (
-                <TouchableOpacity style={styles.button} onPress={onAdd} activeOpacity={0.85}>
+                <TouchableOpacity
+                    style={[styles.button, { backgroundColor: colors.primary }]}
+                    onPress={onAdd}
+                    activeOpacity={0.85}
+                >
                     <MaterialIcons name="add" size={18} color="#FFFFFF" />
                     <Text style={styles.buttonText}>Adicionar Rastreador</Text>
                 </TouchableOpacity>

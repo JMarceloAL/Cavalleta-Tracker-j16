@@ -2,6 +2,8 @@
 
 import { StyleSheet } from 'react-native';
 
+import { APP_GREEN } from '../../theme/colors';
+
 export const styles = StyleSheet.create({
     // ============================================================
     // CONTAINER
@@ -9,7 +11,7 @@ export const styles = StyleSheet.create({
 
     container: {
         flex: 1,
-        backgroundColor: '#F5F7F2',
+        backgroundColor: '#F3F6EF',
         padding: 16,
     },
 
@@ -22,10 +24,11 @@ export const styles = StyleSheet.create({
     // ============================================================
 
     title: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: '700',
         color: '#1F241C',
         marginBottom: 16,
+        letterSpacing: -0.3,
     },
 
     darkTitle: {
@@ -46,22 +49,23 @@ export const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
-        borderRadius: 8,
+        borderRadius: 16,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#E9F0E4',
+        elevation: 5,
         shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
         shadowOffset: {
             width: 0,
-            height: 2,
+            height: 3,
         },
     },
 
     darkDropdownHeader: {
         backgroundColor: '#1B2430',
-        borderWidth: 1,
         borderColor: '#2D3745',
     },
 
@@ -88,12 +92,14 @@ export const styles = StyleSheet.create({
 
     dropdownList: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 8,
+        borderRadius: 14,
         marginTop: 4,
+        borderWidth: 1,
+        borderColor: '#E9F0E4',
         elevation: 4,
         shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
         shadowOffset: {
             width: 0,
             height: 2,
@@ -103,7 +109,6 @@ export const styles = StyleSheet.create({
 
     darkDropdownList: {
         backgroundColor: '#1B2430',
-        borderWidth: 1,
         borderColor: '#2D3745',
     },
 
@@ -168,10 +173,14 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#FFFFFF',
-        borderRadius: 10,
+        borderRadius: 14,
         paddingVertical: 10,
         borderWidth: 1,
         borderColor: '#E6EAE0',
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        shadowOffset: { width: 0, height: 2 },
     },
 
     darkTabButton: {
@@ -180,14 +189,14 @@ export const styles = StyleSheet.create({
     },
 
     tabButtonActive: {
-        backgroundColor: 'rgb(163, 204, 127)',
-        borderColor: 'rgb(163, 204, 127)',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E6EAE0',
     },
 
     tabButtonText: {
         fontSize: 13,
         fontWeight: '700',
-        color: 'rgb(110, 148, 80)',
+        color: '#5F6F5C',
         marginLeft: 6,
     },
 
@@ -205,17 +214,19 @@ export const styles = StyleSheet.create({
 
     folder: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 8,
+        borderRadius: 16,
         padding: 12,
         elevation: 3,
         shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: 0.07,
+        shadowRadius: 8,
         shadowOffset: {
             width: 0,
-            height: 2,
+            height: 3,
         },
         flex: 1,
+        borderWidth: 1,
+        borderColor: '#F0F3EC',
     },
 
     darkFolder: {
@@ -324,19 +335,19 @@ export const styles = StyleSheet.create({
         top: 110,
         right: 16,
         backgroundColor: '#FFFFFF',
-        borderRadius: 12,
+        borderRadius: 14,
         paddingHorizontal: 14,
         paddingVertical: 9,
 
         elevation: 5,
 
         shadowColor: '#000',
-        shadowOpacity: 0.18,
-        shadowRadius: 5,
+        shadowOpacity: 0.14,
+        shadowRadius: 7,
 
         shadowOffset: {
             width: 0,
-            height: 2,
+            height: 3,
         },
 
         zIndex: 20,
@@ -372,7 +383,7 @@ export const styles = StyleSheet.create({
 
         backgroundColor: '#FFFFFF',
 
-        borderRadius: 12,
+        borderRadius: 14,
 
         paddingHorizontal: 12,
         paddingVertical: 8,
@@ -380,12 +391,12 @@ export const styles = StyleSheet.create({
         elevation: 4,
 
         shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
 
         shadowOffset: {
             width: 0,
-            height: 2,
+            height: 3,
         },
 
         zIndex: 20,
@@ -402,7 +413,7 @@ export const styles = StyleSheet.create({
         height: 9,
         borderRadius: 5,
         marginRight: 7,
-        backgroundColor: 'rgb(163, 204, 127)',
+        backgroundColor: APP_GREEN,
     },
 
     movementText: {
@@ -427,7 +438,7 @@ export const styles = StyleSheet.create({
 
         backgroundColor: '#FFFFFF',
 
-        borderRadius: 12,
+        borderRadius: 16,
 
         paddingHorizontal: 14,
         paddingVertical: 12,
@@ -435,12 +446,12 @@ export const styles = StyleSheet.create({
         elevation: 5,
 
         shadowColor: '#000',
-        shadowOpacity: 0.18,
-        shadowRadius: 5,
+        shadowOpacity: 0.14,
+        shadowRadius: 7,
 
         shadowOffset: {
             width: 0,
-            height: 2,
+            height: 3,
         },
 
         zIndex: 20,

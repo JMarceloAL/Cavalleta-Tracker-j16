@@ -23,6 +23,7 @@ import { useTrackerServiceProvider } from '../../contexts/TrackerServiceContext'
 import { useTheme } from '../../contexts/ThemeContext';
 import { requestSmsPermissions } from '../../services/Smsgateway';
 import { detectImeiInBackground } from '../../services/ImeiDetection';
+import { useTrackerSelection } from '../../contexts/TrackerSelectionContext';
 
 interface Props {
     navigation: any;
@@ -31,7 +32,8 @@ interface Props {
 const STORAGE_KEY = '@cavalleta:trackers';
 
 export default function Home({ navigation }: Props) {
-    const { isDark } = useTheme();
+    const { isDark, colors } = useTheme();
+    const { selectedTrackerId, setSelectedTrackerId, resolveSelectedTracker } = useTrackerSelection();
     const [trackers, setTrackers] = useState<Tracker[]>([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [editingTracker, setEditingTracker] = useState<Tracker | null>(null);
@@ -41,6 +43,18 @@ export default function Home({ navigation }: Props) {
     useEffect(() => {
         loadTrackers();
     }, []);
+
+    useEffect(() => {
+        if (trackers.length === 0) {
+            setSelectedTrackerId(null);
+            return;
+        }
+
+        const selected = resolveSelectedTracker(trackers);
+        if (selected && selected.id !== selectedTrackerId) {
+            setSelectedTrackerId(selected.id);
+        }
+    }, [trackers, selectedTrackerId, resolveSelectedTracker, setSelectedTrackerId]);
 
     async function loadTrackers() {
         try {
@@ -61,6 +75,11 @@ export default function Home({ navigation }: Props) {
                 STORAGE_KEY,
                 JSON.stringify(nextTrackers)
             );
+
+            const selected = resolveSelectedTracker(nextTrackers);
+            if (selected) {
+                setSelectedTrackerId(selected.id);
+            }
         } catch (error) {
             console.warn('Erro ao salvar rastreadores', error);
         }
@@ -102,8 +121,8 @@ export default function Home({ navigation }: Props) {
 
             if (!imei) {
                 Alert.alert(
-                    'Não foi possível conectar ao rastreador',
-                    'Não recebemos o retorno do comando PARAM# em 1 minuto. Verifique o número do chip e tente novamente.'
+                    'Não foi possível realizar a conexão com o rastreador',
+                    'Não recebemos a resposta do IMEI em 1 minuto. Verifique o número do chip e tente cadastrar novamente.'
                 );
                 return;
             }
@@ -119,8 +138,8 @@ export default function Home({ navigation }: Props) {
         } catch (error: any) {
             console.log('⚠️ Permissão de SMS negada, IMEI não será detectado:', error.message);
             Alert.alert(
-                'Não foi possível conectar ao rastreador',
-                'Não foi possível obter o IMEI do rastreador. Verifique o número do chip e tente novamente.'
+                'Não foi possível realizar a conexão com o rastreador',
+                'Não foi possível confirmar o IMEI do rastreador. Verifique o número do chip e tente cadastrar novamente.'
             );
         }
     }
@@ -184,15 +203,16 @@ export default function Home({ navigation }: Props) {
             return;
         }
 
-        Alert.alert(
-            'Localizar rastreador',
-            `Ainda não há localização ativa para ${tracker.name}.`
-        );
+        setSelectedTrackerId(tracker.id);
+
+        navigation.navigate('MapScreen', {
+            trackerId: tracker.id,
+        });
     }
 
-    const containerStyle = [styles.container, isDark && styles.darkContainer];
-    const titleStyle = [styles.title, isDark && styles.darkTitle];
-    const subtitleStyle = [styles.subtitle, isDark && styles.darkSubtitle];
+    const containerStyle = [styles.container, { backgroundColor: colors.background }, isDark && styles.darkContainer];
+    const titleStyle = [styles.title, { color: colors.text }, isDark && styles.darkTitle];
+    const subtitleStyle = [styles.subtitle, { color: colors.textMuted }, isDark && styles.darkSubtitle];
 
     return (
         <View style={containerStyle}>
@@ -207,7 +227,7 @@ export default function Home({ navigation }: Props) {
                 </View>
 
                 <TouchableOpacity
-                    style={styles.addButton}
+                    style={[styles.addButton, { backgroundColor: colors.primary, shadowColor: colors.primary + '66' }]}
                     onPress={openAddModal}
                     activeOpacity={0.85}
                 >
@@ -230,6 +250,12 @@ export default function Home({ navigation }: Props) {
                         onDelete={handleDeleteTracker}
                         onLocate={handleLocateTracker}
                         onEdit={openEditModal}
+                        onPress={(tracker) => {
+                            setSelectedTrackerId(tracker.id);
+                            navigation.navigate('MapScreen', {
+                                trackerId: tracker.id,
+                            });
+                        }}
                     />
                 )}
             />

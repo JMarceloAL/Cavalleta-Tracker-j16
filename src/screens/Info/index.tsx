@@ -3,8 +3,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Linking, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { styles } from './styles';
+import { APP_GREEN } from '../../theme/colors';
 
 const REPO_URL = 'https://github.com/JMarceloAL/Cavalleta-Tracker-j16';
 
@@ -25,6 +27,11 @@ const FEATURES = [
         description: 'Consulte as últimas posições registradas de cada rastreador e reveja qualquer uma delas no mapa.',
     },
     {
+        icon: 'alt-route',
+        title: 'Histórico de rotas',
+        description: 'Visualize trajetos completos percorridos pelo veículo como rotas sobre o mapa, com carimbos de data/hora e possibilidade de revisar trechos específicos.',
+    },
+    {
         icon: 'notifications-active',
         title: 'Modo Vigilante',
         description: 'Receba notificações automáticas caso o veículo saia do lugar onde estava parado.',
@@ -37,7 +44,8 @@ const FEATURES = [
 ] as const;
 
 export default function InfoScreen() {
-    const { isDark } = useTheme();
+    const navigation = useNavigation<any>();
+    const { isDark, colors } = useTheme();
 
     const containerStyle = [styles.container, isDark && styles.darkContainer];
     const titleStyle = [styles.title, isDark && styles.darkText];
@@ -57,12 +65,30 @@ export default function InfoScreen() {
 
     return (
         <SafeAreaView style={containerStyle}>
+            <View style={styles.topBar}>
+                <TouchableOpacity
+                    style={styles.menuButton}
+                    onPress={() => navigation.openDrawer()}
+                    activeOpacity={0.8}
+                >
+                    <MaterialIcons
+                        name="menu"
+                        size={28}
+                        color={isDark ? '#F3F4F6' : '#111827'}
+                    />
+                </TouchableOpacity>
+            </View>
+
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.iconCircle}>
-                    <MaterialIcons name="info-outline" size={32} color="rgb(163, 204, 127)" />
+                    <MaterialIcons name="info-outline" size={32} color={colors.primary} />
                 </View>
 
-                <Text style={titleStyle}>Cavalleta Tracker</Text>
+                <Text style={titleStyle}>
+                    <Text style={{ color: colors.primary }}>CAVA</Text>
+                    {' '}
+                    <Text style={titleStyle}>Tracker</Text>
+                </Text>
                 <Text style={taglineStyle}>Monitoramento de rastreadores veiculares</Text>
 
                 {/* Sobre o projeto */}
@@ -100,7 +126,7 @@ export default function InfoScreen() {
                                 <MaterialIcons
                                     name={feature.icon as any}
                                     size={18}
-                                    color="rgb(110, 148, 80)"
+                                    color={colors.primary}
                                 />
                             </View>
 

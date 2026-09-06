@@ -5,6 +5,7 @@ import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 
 import type { Tracker } from '../../types/Tracker';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTrackerSelection } from '../../contexts/TrackerSelectionContext';
 import { styles } from './styles';
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
     onDelete(id: string): void;
     onLocate(id: string): void;
     onEdit(tracker: Tracker): void;
+    onPress?(tracker: Tracker): void;
 }
 
 /**
@@ -38,18 +40,36 @@ export default function TrackerCard({
     onDelete,
     onLocate,
     onEdit,
+    onPress,
 }: Props) {
-    const { isDark } = useTheme();
+    const { isDark, colors } = useTheme();
+    const { selectedTrackerId, setSelectedTrackerId } = useTrackerSelection();
     const hasImei = Boolean(tracker.imei);
 
     return (
         <TouchableOpacity
-            style={[styles.card, isDark && styles.darkCard]}
+            style={[
+                styles.card,
+                isDark && styles.darkCard,
+                selectedTrackerId === tracker.id && styles.selectedCard,
+                selectedTrackerId === tracker.id && isDark && styles.darkSelectedCard,
+                selectedTrackerId === tracker.id && {
+                    borderColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOpacity: 0.35,
+                    shadowRadius: 12,
+                    shadowOffset: { width: 0, height: 5 },
+                    elevation: 5,
+                },
+            ]}
             activeOpacity={0.7}
-
+            onPress={() => {
+                setSelectedTrackerId(tracker.id);
+                onPress?.(tracker);
+            }}
         >
             <View style={[styles.avatar, isDark && styles.darkAvatar]}>
-                <Ionicons name="radio-outline" size={22} color="rgb(163, 204, 127)" />
+                <Ionicons name="radio-outline" size={22} color={colors.primary} />
             </View>
 
             <View style={styles.info}>
@@ -70,7 +90,7 @@ export default function TrackerCard({
                     style={[styles.actionButton, isDark ? styles.darkEditButton : { backgroundColor: '#EDF5E4' }]}
                     onPress={() => onEdit(tracker)}
                 >
-                    <MaterialIcons name="edit" size={18} color={isDark ? '#A7F3D0' : 'rgb(110, 148, 80)'} />
+                    <MaterialIcons name="edit" size={18} color={colors.primary} />
                 </TouchableOpacity>
 
                 <TouchableOpacity

@@ -12,19 +12,19 @@ export const styles = StyleSheet.create({
 
     header: {
         paddingHorizontal: 20,
-        paddingTop: 24,
+        paddingTop: 32,
         paddingBottom: 12,
     },
 
     title: {
-        fontSize: 24,
+        fontSize: 26,
         fontWeight: '800',
         color: '#1F241C',
         letterSpacing: -0.3,
     },
 
     subtitle: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '700',
         color: '#75806D',
         letterSpacing: 0.4,
@@ -58,16 +58,19 @@ export const styles = StyleSheet.create({
         color: '#AFB9C7',
     },
     unlockButton: {
-        backgroundColor: 'rgb(163, 204, 127)',
-        borderRadius: 10,
+        borderRadius: 12,
         paddingVertical: 10,
         paddingHorizontal: 24,
+        elevation: 2,
     },
     protectedSectionContainer: {
-        borderRadius: 14,
+        borderRadius: 16,
         borderWidth: 1,
+        marginTop: 16,
         marginBottom: 16,
         overflow: 'hidden',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#EAF0E5',
     },
     protectedSectionHeader: {
         flexDirection: 'row',
@@ -101,18 +104,17 @@ export const styles = StyleSheet.create({
     },
 
     listButton: {
-        backgroundColor: 'rgb(163, 204, 127)',
-        borderRadius: 10,
+        borderRadius: 14,
         paddingVertical: 14,
         paddingHorizontal: 16,
         alignSelf: 'stretch',
         alignItems: 'center',
         justifyContent: 'center',
-        elevation: 1,
-        shadowColor: '#000',
-        shadowOpacity: 0.08,
-        shadowRadius: 3,
-        shadowOffset: { width: 0, height: 1 },
+        elevation: 3,
+        shadowColor: '#000000',
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
     },
 
     buttonDestructive: {
@@ -128,11 +130,15 @@ export const styles = StyleSheet.create({
 
     responseBox: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 14,
+        borderRadius: 18,
         padding: 16,
         marginBottom: 8,
         borderWidth: 1,
         borderColor: '#E6EAE0',
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
     },
     darkResponseBox: {
         backgroundColor: '#1D2733',

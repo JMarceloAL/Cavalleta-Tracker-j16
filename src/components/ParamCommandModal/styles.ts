@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { APP_GREEN } from '../../theme/colors';
 
 export const styles = StyleSheet.create({
     overlay: {
@@ -41,7 +42,7 @@ export const styles = StyleSheet.create({
         color: '#F3F4F6',
     },
     primaryButton: {
-        backgroundColor: 'rgb(163, 204, 127)',
+        backgroundColor: APP_GREEN,
         borderRadius: 8,
         paddingVertical: 14,
         alignItems: 'center',

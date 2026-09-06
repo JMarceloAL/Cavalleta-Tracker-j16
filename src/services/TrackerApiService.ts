@@ -112,6 +112,8 @@ export type ApiTracker = {
         serial: string;
     } | null;
     movement?: ApiMovement | null;
+    routes?: ApiRouteSummary[];
+    stoppedLocations?: ApiStoppedLocation[];
 };
 
 /**

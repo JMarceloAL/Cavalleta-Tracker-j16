@@ -18,6 +18,7 @@ import CollapsibleSection from '../../components/CollapsibleSection';
 import Collapsible from '../../components/Collapsible';
 import { useTrackerServiceProvider } from '../../contexts/TrackerServiceContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTrackerSelection } from '../../contexts/TrackerSelectionContext';
 import { requestSmsPermissions } from '../../services/Smsgateway';
 import {
     STATUS_COMMANDS,
@@ -42,6 +43,7 @@ export default function SmsScreen() {
     const navigation = useNavigation<any>();
     const { getService } = useTrackerServiceProvider();
     const { isDark, colors } = useTheme();
+    const { selectedTrackerId, setSelectedTrackerId, resolveSelectedTracker } = useTrackerSelection();
 
     const [trackers, setTrackers] = useState<Tracker[]>([]);
     const [selectedTracker, setSelectedTracker] = useState<Tracker | null>(null);
@@ -71,14 +73,19 @@ export default function SmsScreen() {
             const list: Tracker[] = stored ? JSON.parse(stored) : [];
             setTrackers(list);
 
+            const preferred = resolveSelectedTracker(list);
             setSelectedTracker(prev => {
                 const stillExists = prev && list.find(t => t.id === prev.id);
-                return stillExists ? prev : list[0] ?? null;
+                const next = stillExists ? prev : preferred;
+                if (next) {
+                    setSelectedTrackerId(next.id);
+                }
+                return next ?? null;
             });
         } catch (error) {
             console.warn('Erro ao carregar rastreadores', error);
         }
-    }, []);
+    }, [resolveSelectedTracker, setSelectedTrackerId]);
 
     useFocusEffect(
         useCallback(() => {
@@ -237,6 +244,8 @@ export default function SmsScreen() {
     const responseBoxStyle = [styles.responseBox, isDark && styles.darkResponseBox];
     const responseCommandStyle = [styles.responseCommand, isDark && styles.darkResponseCommand];
     const responseTextStyle = [styles.responseText, isDark && styles.darkResponseText];
+    const primaryActionStyle = { backgroundColor: colors.primary };
+    const destructiveActionStyle = { backgroundColor: '#D95C5C' };
 
     return (
         <View style={containerStyle}>
@@ -244,14 +253,17 @@ export default function SmsScreen() {
             <TrackerDropdown
                 trackers={trackers}
                 selectedTracker={selectedTracker}
-                onSelect={setSelectedTracker}
+                onSelect={(tracker) => {
+                    setSelectedTracker(tracker);
+                    setSelectedTrackerId(tracker.id);
+                }}
             />
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {response && (
                     <View style={responseBoxStyle}>
                         <View style={styles.responseHeader}>
-                            <MaterialIcons name="check-circle" size={16} color="rgb(110, 148, 80)" />
+                            <MaterialIcons name="check-circle" size={16} color={colors.primary} />
                             <Text style={responseCommandStyle}>Comando: {response.command}</Text>
                         </View>
                         <Text style={responseTextStyle}>{response.text}</Text>
@@ -263,7 +275,10 @@ export default function SmsScreen() {
                         {STATUS_COMMANDS.map(cmd => (
                             <TouchableOpacity
                                 key={cmd.id}
-                                style={[styles.listButton, cmd.destructive && styles.buttonDestructive]}
+                                style={[
+                                    styles.listButton,
+                                    cmd.destructive ? destructiveActionStyle : primaryActionStyle,
+                                ]}
                                 onPress={() => handleStatusCommandPress(cmd)}
                                 disabled={loadingCommandId !== null}
                                 activeOpacity={0.85}
@@ -332,7 +347,7 @@ export default function SmsScreen() {
                                 {PROTECTED_STATUS_COMMANDS.map(cmd => (
                                     <TouchableOpacity
                                         key={cmd.id}
-                                        style={styles.listButton}
+                                        style={[styles.listButton, primaryActionStyle]}
                                         onPress={() =>
                                             handleProtectedStatusCommandPress(cmd)
                                         }
@@ -351,7 +366,7 @@ export default function SmsScreen() {
                                 {PARAM_COMMANDS.map(cmd => (
                                     <TouchableOpacity
                                         key={cmd.id}
-                                        style={styles.listButton}
+                                        style={[styles.listButton, primaryActionStyle]}
                                         onPress={() => handleParamCommandPress(cmd)}
                                         disabled={loadingCommandId !== null}
                                         activeOpacity={0.85}
@@ -363,7 +378,7 @@ export default function SmsScreen() {
                                 {/* Restaurar Padrão de Fábrica — sempre por último */}
                                 <TouchableOpacity
                                     key={RESTORE_FACTORY_COMMAND.id}
-                                    style={[styles.listButton, styles.buttonDestructive]}
+                                    style={[styles.listButton, destructiveActionStyle]}
                                     onPress={() =>
                                         handleProtectedStatusCommandPress(
                                             RESTORE_FACTORY_COMMAND

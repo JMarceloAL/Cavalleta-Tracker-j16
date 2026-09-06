@@ -57,6 +57,7 @@ import {
 import {
     checkRealtimeAvailability,
 } from '../../services/TrackerApiService';
+import { useTrackerSelection } from '../../contexts/TrackerSelectionContext';
 
 import type {
     Tracker,
@@ -64,14 +65,43 @@ import type {
 } from '../../types/Tracker';
 
 import { styles } from './styles';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const STORAGE_KEY =
     '@cavalleta:trackers';
 
+function formatDistanceKm(value: number) {
+    const safeValue = Number.isFinite(value)
+        ? Math.max(0, value)
+        : 0;
+
+    if (safeValue >= 100) {
+        return `${safeValue.toFixed(0)} km`;
+    }
+
+    if (safeValue >= 10) {
+        return `${safeValue.toFixed(1).replace(/\.0$/, '')} km`;
+    }
+
+    if (safeValue >= 1) {
+        return `${safeValue.toFixed(2).replace(/\.?0+$/, '')} km`;
+    }
+
+    return `${safeValue.toFixed(3).replace(/\.?0+$/, '')} km`;
+}
+
 export default function MapScreen() {
+    const { colors, isDark } = useTheme();
+
     // ============================================================
     // CONTEXT
     // ============================================================
+
+    const {
+        selectedTrackerId,
+        setSelectedTrackerId,
+        resolveSelectedTracker,
+    } = useTrackerSelection();
 
     const {
         isMoving,
@@ -254,21 +284,15 @@ export default function MapScreen() {
                         route.params
                             ?.trackerId;
 
-                    if (requestedId) {
-                        const requested =
-                            list.find(
-                                tracker =>
-                                    tracker.id ===
-                                    requestedId
-                            );
+                    const preferredTracker =
+                        requestedId
+                            ? list.find(tracker => tracker.id === requestedId)
+                            : resolveSelectedTracker(list);
 
-                        if (requested) {
-                            setSelectedTracker(
-                                requested
-                            );
-
-                            return;
-                        }
+                    if (preferredTracker) {
+                        setSelectedTrackerId(preferredTracker.id);
+                        setSelectedTracker(preferredTracker);
+                        return;
                     }
 
                     setSelectedTracker(
@@ -368,6 +392,8 @@ export default function MapScreen() {
         if (!selectedTracker) {
             return;
         }
+
+        setSelectedTrackerId(selectedTracker.id);
 
         if (isHistoricalRoute) {
             return;
@@ -1026,7 +1052,7 @@ export default function MapScreen() {
     const displayedRoutePoints =
         isHistoricalRoute
             ? historyRoutePoints
-            : routePoints;
+            : [];
 
     // ============================================================
     // RENDER
@@ -1072,18 +1098,63 @@ export default function MapScreen() {
                             'center',
                         alignItems:
                             'center',
-                        padding: 24,
+                        padding: 32,
+                        backgroundColor: isDark
+                            ? colors.background
+                            : '#FFFFFF',
                     }}
                 >
+                    <View
+                        style={{
+                            width: 92,
+                            height: 92,
+                            borderRadius: 46,
+                            backgroundColor: isDark
+                                ? colors.surface
+                                : '#F2F7EC',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            marginBottom: 18,
+                            borderWidth: 1,
+                            borderColor: isDark ? colors.border : '#E7F0DF',
+                        }}
+                    >
+                        <Text style={{ fontSize: 36, opacity: 0.9 }}>
+                            {selectedTracker ? '📍' : '🛰️'}
+                        </Text>
+                    </View>
+
                     <Text
                         style={{
                             textAlign:
                                 'center',
+                            color: isDark
+                                ? colors.text
+                                : '#1F241C',
+                            fontSize: 17,
+                            fontWeight: '700',
+                            marginBottom: 8,
                         }}
                     >
                         {selectedTracker
                             ? 'Nenhuma localização recebida ainda.'
                             : 'Nenhum rastreador cadastrado.'}
+                    </Text>
+
+                    <Text
+                        style={{
+                            textAlign:
+                                'center',
+                            color: isDark
+                                ? colors.textMuted
+                                : '#6C7D6A',
+                            fontSize: 13,
+                            lineHeight: 20,
+                        }}
+                    >
+                        {selectedTracker
+                            ? 'Aguarde a próxima atualização do rastreador para visualizar a rota e a posição no mapa.'
+                            : 'Cadastre um rastreador para começar a acompanhar sua localização e histórico.'}
                     </Text>
                 </View>
             )}
@@ -1119,10 +1190,9 @@ export default function MapScreen() {
                                 styles.kmText
                             }
                         >
-                            {currentTripDistanceKm.toFixed(
-                                2
-                            )}{' '}
-                            km
+                            {formatDistanceKm(
+                                currentTripDistanceKm
+                            )}
                         </Text>
                     </View>
                 )}

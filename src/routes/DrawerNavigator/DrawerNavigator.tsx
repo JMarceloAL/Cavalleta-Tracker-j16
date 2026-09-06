@@ -2,9 +2,10 @@
 import React from 'react';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { MaterialIcons } from '@expo/vector-icons';
-import TabNavigator from '../TabNavigator/TabNavigator';
-import { logout } from '../../services/storage/authStorage';
+import TabNavigator from '../TabNavigator/TabNavigator'; import SettingsScreen from '../../screens/Settings';
+import InfoScreen from '../../screens/Info'; import { logout } from '../../services/storage/authStorage';
 import { useTheme } from '../../contexts/ThemeContext';
+import { APP_GREEN } from '../../theme/colors';
 
 const Drawer = createDrawerNavigator();
 
@@ -14,20 +15,20 @@ function EmptyScreen() {
 }
 
 export default function DrawerNavigator() {
-    const { isDark } = useTheme();
+    const { isDark, colors } = useTheme();
 
     return (
         <Drawer.Navigator
             initialRouteName="Início"
             screenOptions={{
                 headerShown: false,
-                drawerActiveTintColor: 'rgb(163, 204, 127)',
+                drawerActiveTintColor: colors.primary,
                 drawerInactiveTintColor: isDark ? '#AFB9C7' : '#555',
                 drawerLabelStyle: {
                     fontSize: 16,
                 },
                 drawerStyle: {
-                    backgroundColor: isDark ? '#121821' : '#FFFFFF',
+                    backgroundColor: colors.background,
                 },
             }}
         >
@@ -52,14 +53,7 @@ export default function DrawerNavigator() {
             {/* ITEM: CONFIGURAÇÕES */}
             <Drawer.Screen
                 name="Configurações"
-                component={TabNavigator}
-                listeners={({ navigation }) => ({
-                    drawerItemPress: (e) => {
-                        e.preventDefault();
-                        navigation.closeDrawer();
-                        navigation.navigate('Início', { screen: 'SettingsScreen' });
-                    },
-                })}
+                component={SettingsScreen}
                 options={{
                     drawerIcon: ({ color, size }) => (
                         <MaterialIcons name="settings" color={color} size={size} />
@@ -70,14 +64,7 @@ export default function DrawerNavigator() {
             {/* ITEM: INFO */}
             <Drawer.Screen
                 name="Info"
-                component={TabNavigator}
-                listeners={({ navigation }) => ({
-                    drawerItemPress: (e) => {
-                        e.preventDefault();
-                        navigation.closeDrawer();
-                        navigation.navigate('Início', { screen: 'InfoScreen' });
-                    },
-                })}
+                component={InfoScreen}
                 options={{
                     drawerIcon: ({ color, size }) => (
                         <MaterialIcons name="info-outline" color={color} size={size} />

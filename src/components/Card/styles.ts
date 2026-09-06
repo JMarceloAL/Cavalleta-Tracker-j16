@@ -5,21 +5,41 @@ export const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
-        borderRadius: 14,
-        padding: 14,
+        borderRadius: 18,
+        paddingVertical: 16,
+        paddingHorizontal: 14,
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: '#E6EAE0',
+        borderColor: '#EAF0E5',
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 3,
     },
     darkCard: {
         backgroundColor: '#1D2733',
-        borderColor: '#334155',
+        borderColor: '#314254',
+        shadowColor: '#000',
+        shadowOpacity: 0.22,
+    },
+    selectedCard: {
+        borderColor: 'rgba(86, 172, 0, 0.9)',
+        backgroundColor: '#F9FBF7',
+        shadowColor: 'rgba(86, 172, 0, 0.34)',
+        shadowOpacity: 0.38,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 6 },
+        elevation: 5,
+    },
+    darkSelectedCard: {
+        backgroundColor: '#1F2A36',
     },
 
     avatar: {
-        width: 46,
-        height: 46,
-        borderRadius: 23,
+        width: 50,
+        height: 50,
+        borderRadius: 16,
         backgroundColor: '#EDF5E4',
         justifyContent: 'center',
         alignItems: 'center',
@@ -31,12 +51,14 @@ export const styles = StyleSheet.create({
 
     info: {
         flex: 1,
+        paddingRight: 8,
     },
 
     name: {
         fontSize: 16,
         fontWeight: '700',
         color: '#1F241C',
+        letterSpacing: -0.2,
     },
     darkName: {
         color: '#F3F4F6',
@@ -45,13 +67,13 @@ export const styles = StyleSheet.create({
     metaRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 4,
+        marginTop: 5,
     },
 
     phone: {
         fontSize: 13,
         color: '#75806D',
-        marginLeft: 4,
+        marginLeft: 6,
     },
     darkPhone: {
         color: '#AFB9C7',
@@ -83,9 +105,9 @@ export const styles = StyleSheet.create({
     },
 
     actionButton: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
+        width: 36,
+        height: 36,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
         marginLeft: 6,

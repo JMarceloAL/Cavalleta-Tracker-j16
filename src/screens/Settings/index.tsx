@@ -22,24 +22,35 @@ import {
     MaterialIcons,
 } from '@expo/vector-icons';
 
+import * as LocalAuthentication from 'expo-local-authentication';
+
 import { styles } from './styles';
 
 import {
     useTheme,
 } from '../../contexts/ThemeContext';
 
+import { useNavigation } from '@react-navigation/native';
+
 import {
     getCredentials,
     saveCredentials,
+    saveCredentialsSecure,
+    getBiometricEnabled,
+    setBiometricEnabled,
 } from '../../services/storage/authStorage';
 
 import Collapsible from '../../components/Collapsible';
+import { APP_GREEN, APP_THEMES, APP_THEME_OPTIONS, type AppThemeName } from '../../theme/colors';
 
 export default function SettingsScreen({
     navigation,
 }: any) {
+    const nav = useNavigation<any>();
     const {
         isDark,
+        activeTheme,
+        colors,
         setTheme,
     } = useTheme();
 
@@ -68,14 +79,36 @@ export default function SettingsScreen({
         setIsLoading,
     ] = useState(true);
 
+    /**
+     * ========================================================
+     * SEGURANÇA (senha + biometria)
+     * ========================================================
+     */
     const [
-        credentialsOpen,
-        setCredentialsOpen,
+        securityOpen,
+        setSecurityOpen,
+    ] = useState(false);
+
+    const [
+        biometricAvailable,
+        setBiometricAvailable,
+    ] = useState(false);
+
+    const [
+        biometricEnabled,
+        setBiometricEnabledState,
     ] = useState(false);
 
     const [
         clearing,
         setClearing,
+    ] = useState(false);
+
+    const [storageOpen, setStorageOpen] = useState(false);
+
+    const [
+        themeMenuOpen,
+        setThemeMenuOpen,
     ] = useState(false);
 
     /**
@@ -111,6 +144,72 @@ export default function SettingsScreen({
 
     /**
      * ========================================================
+     * BIOMETRIA — disponibilidade + estado atual
+     * ========================================================
+     */
+    useEffect(() => {
+        async function loadBiometricState() {
+            try {
+                const hasHardware = await LocalAuthentication.hasHardwareAsync();
+                const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+                const enabled = await getBiometricEnabled();
+
+                setBiometricAvailable(!!hasHardware && !!isEnrolled);
+                setBiometricEnabledState(!!enabled);
+            } catch (error) {
+                console.warn('Erro ao verificar biometria:', error);
+            }
+        }
+
+        loadBiometricState();
+    }, []);
+
+    /**
+     * Liga/desliga o login por biometria. Ao ATIVAR, pede uma
+     * confirmação biométrica na hora — diferente do fluxo logo após
+     * o login (onde isso seria repetitivo), aqui é uma ação
+     * deliberada nas Configurações, então faz sentido confirmar.
+     */
+    async function handleToggleBiometric(value: boolean) {
+        if (!value) {
+            await setBiometricEnabled(false);
+            setBiometricEnabledState(false);
+            return;
+        }
+
+        try {
+            const hasHardware = await LocalAuthentication.hasHardwareAsync();
+            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+            if (!hasHardware || !isEnrolled) {
+                Alert.alert(
+                    'Biometria indisponível',
+                    'Este dispositivo não tem biometria configurada. Configure a impressão digital ou reconhecimento facial nas configurações do sistema primeiro.'
+                );
+                return;
+            }
+
+            const auth = await LocalAuthentication.authenticateAsync({
+                promptMessage: 'Confirme sua impressão digital ou PIN',
+            });
+
+            if (!auth.success) {
+                Alert.alert('Autenticação', 'Não foi possível validar sua impressão digital/PIN.');
+                return;
+            }
+
+            const creds = await getCredentials();
+            await saveCredentialsSecure(creds.username, creds.password);
+            await setBiometricEnabled(true);
+            setBiometricEnabledState(true);
+        } catch (error) {
+            console.warn('Erro ao ativar biometria:', error);
+            Alert.alert('Erro', 'Não foi possível ativar a biometria.');
+        }
+    }
+
+    /**
+     * ========================================================
      * SALVAR CREDENCIAIS
      * ========================================================
      */
@@ -139,13 +238,20 @@ export default function SettingsScreen({
                 password
             );
 
+            // Se a biometria já estava ativada, mantém a credencial
+            // segura sincronizada com a nova senha — senão o login
+            // por biometria continuaria usando a senha antiga.
+            if (biometricEnabled) {
+                await saveCredentialsSecure(username, password);
+            }
+
             Alert.alert(
                 'Sucesso',
                 'Usuário e senha atualizados.'
             );
 
             setConfirmPassword('');
-            setCredentialsOpen(false);
+            setSecurityOpen(false);
         } catch (error) {
             Alert.alert(
                 'Erro',
@@ -196,48 +302,91 @@ export default function SettingsScreen({
     }
 
     /**
+     * Restaurar Padrões de Fábrica
+     */
+    function handleFactoryReset() {
+        Alert.alert(
+            'Restaurar padrões de fábrica',
+            'Isso vai apagar todas as configurações, rastreadores e dados do app e restaurar o estado de fábrica. Deseja continuar?',
+            [
+                { text: 'Não', style: 'cancel' },
+                {
+                    text: 'Sim',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setClearing(true);
+
+                        try {
+                            await AsyncStorage.clear();
+
+                            Alert.alert(
+                                'Concluído',
+                                'O app foi restaurado para os padrões de fábrica.'
+                            );
+                        } catch (error) {
+                            Alert.alert(
+                                'Erro',
+                                'Não foi possível restaurar o app.'
+                            );
+                        } finally {
+                            setClearing(false);
+                        }
+                    }
+                }
+            ]
+        );
+    }
+
+    /**
      * ========================================================
      * ESTILOS DINÂMICOS
      * ========================================================
      */
     const containerStyle = [
         styles.container,
+        { backgroundColor: colors.background },
         isDark &&
         styles.darkContainer,
     ];
 
     const rowStyle = [
         styles.row,
+        { backgroundColor: colors.surface },
         isDark &&
         styles.darkRow,
     ];
 
     const formStyle = [
         styles.form,
+        { backgroundColor: colors.surface },
         isDark &&
         styles.darkForm,
     ];
 
     const inputStyle = [
         styles.input,
+        { backgroundColor: colors.input, borderColor: colors.border, color: colors.text },
         isDark &&
         styles.darkInput,
     ];
 
     const labelStyle = [
         styles.label,
+        { color: colors.text },
         isDark &&
         styles.darkLabel,
     ];
 
     const titleStyle = [
         styles.title,
+        { color: colors.text },
         isDark &&
         styles.darkText,
     ];
 
     const helpStyle = [
         styles.help,
+        { color: colors.textMuted },
         isDark &&
         styles.darkHelp,
     ];
@@ -251,111 +400,159 @@ export default function SettingsScreen({
         <SafeAreaView
             style={containerStyle}
         >
-            <Text
-                style={titleStyle}
-            >
-                Configurações
-            </Text>
-
-            {/* =================================================
-                TEMA
-            ================================================= */}
-            <View style={rowStyle}>
-                <View>
-                    <Text
-                        style={labelStyle}
-                    >
-                        Tema escuro
-                    </Text>
-
-                    <Text
-                        style={helpStyle}
-                    >
-                        Aplica o tema em toda a interface.
-                    </Text>
-                </View>
-
-                <Switch
-                    value={isDark}
-                    onValueChange={async (
-                        value
-                    ) => {
-                        await setTheme(
-                            value
-                                ? 'dark'
-                                : 'light'
-                        );
-                    }}
-                    thumbColor={
-                        isDark
-                            ? '#F3F4F6'
-                            : '#FFFFFF'
-                    }
-                    trackColor={{
-                        false: '#D1D5DB',
-                        true: 'rgb(163, 204, 127)',
-                    }}
-                />
-            </View>
-
-            {/* =================================================
-                CREDENCIAIS
-            ================================================= */}
-            <View style={formStyle}>
+            <View style={styles.topBar}>
                 <TouchableOpacity
-                    style={
-                        styles.dropdownHeader
-                    }
-                    onPress={() =>
-                        setCredentialsOpen(
-                            prev => !prev
-                        )
-                    }
+                    style={styles.menuButton}
+                    onPress={() => navigation?.openDrawer?.() ?? nav.openDrawer()}
                     activeOpacity={0.8}
                 >
-                    <View
-                        style={{
-                            flex: 1,
-                        }}
-                    >
-                        <Text
-                            style={labelStyle}
-                        >
-                            Trocar usuário e senha
-                        </Text>
-
-                        <Text
-                            style={helpStyle}
-                        >
-                            Essas credenciais serão usadas no login do app.
-                        </Text>
-                    </View>
-
                     <MaterialIcons
-                        name={
-                            credentialsOpen
-                                ? 'expand-less'
-                                : 'expand-more'
-                        }
-                        size={24}
-                        color={
-                            isDark
-                                ? '#F3F4F6'
-                                : '#222'
-                        }
+                        name="menu"
+                        size={28}
+                        color={isDark ? '#F3F4F6' : '#111827'}
                     />
                 </TouchableOpacity>
 
-                <Collapsible
-                    open={
-                        credentialsOpen
-                    }
+                <Text style={titleStyle}>Configurações</Text>
+            </View>
+
+            {/* =================================================
+                TEMAS
+            ================================================= */}
+            <View style={[rowStyle, { flexDirection: 'column', alignItems: 'stretch' }]}>
+                <TouchableOpacity
+                    style={styles.dropdownHeader}
+                    onPress={() => setThemeMenuOpen(prev => !prev)}
+                    activeOpacity={0.8}
                 >
-                    <View
-                        style={
-                            styles.dropdownContent
-                        }
-                    >
+                    <View style={{ flex: 1 }}>
+                        <Text style={labelStyle}>Temas</Text>
+                        <Text style={helpStyle}>Ao escolher um tema customizado, o modo escuro é desativado automaticamente.</Text>
+                    </View>
+
+                    <MaterialIcons
+                        name={themeMenuOpen ? 'expand-less' : 'expand-more'}
+                        size={24}
+                        color={isDark ? '#F3F4F6' : '#222'}
+                    />
+                </TouchableOpacity>
+
+                <Collapsible open={themeMenuOpen}>
+                    <View style={[styles.themeMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        {APP_THEME_OPTIONS.map((themeKey) => {
+                            const option = APP_THEMES[themeKey];
+                            const selected = activeTheme === themeKey;
+
+                            return (
+                                <TouchableOpacity
+                                    key={themeKey}
+                                    style={[
+                                        styles.themeMenuItem,
+                                        selected && { backgroundColor: colors.backgroundAlt, borderColor: colors.primary },
+                                    ]}
+                                    activeOpacity={0.9}
+                                    onPress={async () => {
+                                        await setTheme(themeKey as AppThemeName);
+                                        setThemeMenuOpen(false);
+                                    }}
+                                >
+                                    <View style={styles.themePreviewRow}>
+                                        {option.preview.map((color, index) => (
+                                            <View
+                                                key={`${themeKey}-${index}`}
+                                                style={[styles.themePreviewSwatch, { backgroundColor: color }]}
+                                            />
+                                        ))}
+                                    </View>
+
+                                    <View style={styles.themeMenuItemTextWrap}>
+                                        <Text style={[styles.themeButtonText, selected && { color: colors.primary }]}>{option.label}</Text>
+                                        <Text style={[styles.themeButtonDescription, { color: colors.textMuted }]}>{option.description}</Text>
+                                    </View>
+
+                                    {selected && (
+                                        <MaterialIcons name="check" size={18} color={colors.primary} />
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                </Collapsible>
+
+                <View style={styles.darkToggleRow}>
+                    <Text style={labelStyle}>Modo escuro</Text>
+                    <Switch
+                        value={isDark}
+                        onValueChange={async (value) => {
+                            await setTheme(value ? 'dark' : 'light');
+                        }}
+                        disabled={activeTheme !== 'light' && activeTheme !== 'dark'}
+                        thumbColor={isDark ? '#F3F4F6' : '#FFFFFF'}
+                        trackColor={{
+                            false: '#D1D5DB',
+                            true: APP_GREEN,
+                        }}
+                    />
+                </View>
+            </View>
+
+            {/* =================================================
+                SEGURANÇA (senha + biometria)
+            ================================================= */}
+            <View style={formStyle}>
+                <TouchableOpacity
+                    style={styles.dropdownHeader}
+                    onPress={() => setSecurityOpen(prev => !prev)}
+                    activeOpacity={0.8}
+                >
+                    <View style={{ flex: 1 }}>
+                        <Text style={labelStyle}>Segurança</Text>
+                        <Text style={helpStyle}>Senha de acesso e login por biometria.</Text>
+                    </View>
+
+                    <MaterialIcons
+                        name={securityOpen ? 'expand-less' : 'expand-more'}
+                        size={24}
+                        color={isDark ? '#F3F4F6' : '#222'}
+                    />
+                </TouchableOpacity>
+
+                <Collapsible open={securityOpen}>
+                    <View style={styles.dropdownContent}>
+
+                        {/* Biometria */}
+                        <View style={styles.darkToggleRow}>
+                            <View style={{ flex: 1, marginRight: 12 }}>
+                                <Text style={labelStyle}>Login por biometria</Text>
+                                <Text style={helpStyle}>
+                                    {biometricAvailable
+                                        ? 'Use impressão digital ou PIN para entrar mais rápido.'
+                                        : 'Nenhuma biometria configurada neste dispositivo.'}
+                                </Text>
+                            </View>
+
+                            <Switch
+                                value={biometricEnabled}
+                                onValueChange={handleToggleBiometric}
+                                disabled={!biometricAvailable}
+                                thumbColor={isDark ? '#F3F4F6' : '#FFFFFF'}
+                                trackColor={{ false: '#D1D5DB', true: APP_GREEN }}
+                            />
+                        </View>
+
+                        {/* Divisor */}
+                        <View
+                            style={{
+                                height: 1,
+                                backgroundColor: isDark ? '#334155' : '#EAEFE5',
+                                marginVertical: 16,
+                            }}
+                        />
+
+                        {/* Trocar usuário e senha */}
+                        <Text style={[labelStyle, { marginBottom: 4 }]}>Trocar usuário e senha</Text>
+                        <Text style={[helpStyle, { marginBottom: 12 }]}>Essas credenciais serão usadas no login do app.</Text>
+
                         <TextInput
                             style={inputStyle}
                             placeholder="Usuário"
@@ -411,9 +608,10 @@ export default function SettingsScreen({
                         />
 
                         <TouchableOpacity
-                            style={
-                                styles.button
-                            }
+                            style={[
+                                styles.button,
+                                { backgroundColor: colors.primary },
+                            ]}
                             onPress={
                                 handleSaveCredentials
                             }
@@ -431,42 +629,37 @@ export default function SettingsScreen({
             </View>
 
             {/* =================================================
-                STORAGE
+                STORAGE (Factory Reset)
             ================================================= */}
             <View style={formStyle}>
-                <Text
-                    style={labelStyle}
-                >
-                    Armazenamento
-                </Text>
-
-                <Text
-                    style={helpStyle}
-                >
-                    Remove rastreadores cadastrados, histórico e demais dados salvos no app.
-                </Text>
-
                 <TouchableOpacity
-                    style={
-                        styles.dangerButton
-                    }
-                    onPress={
-                        handleClearStorage
-                    }
-                    disabled={
-                        clearing
-                    }
+                    style={styles.dropdownHeader}
+                    onPress={() => setStorageOpen(prev => !prev)}
+                    activeOpacity={0.8}
                 >
-                    <Text
-                        style={
-                            styles.dangerButtonText
-                        }
-                    >
-                        {clearing
-                            ? 'Limpando...'
-                            : 'Limpar armazenamento'}
-                    </Text>
+                    <View style={{ flex: 1 }}>
+                        <Text style={labelStyle}>Restaurar padrões de fábrica</Text>
+                        <Text style={helpStyle}>Remove todas as configurações, rastreadores e dados do app.</Text>
+                    </View>
+
+                    <MaterialIcons
+                        name={storageOpen ? 'expand-less' : 'expand-more'}
+                        size={24}
+                        color={isDark ? '#F3F4F6' : '#222'}
+                    />
                 </TouchableOpacity>
+
+                <Collapsible open={storageOpen}>
+                    <View style={styles.dropdownContent}>
+                        <TouchableOpacity
+                            style={styles.dangerButton}
+                            onPress={handleFactoryReset}
+                            disabled={clearing}
+                        >
+                            <Text style={styles.dangerButtonText}>{clearing ? 'Processando...' : 'Restaurar padrões de fábrica'}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </Collapsible>
             </View>
         </SafeAreaView>
     );

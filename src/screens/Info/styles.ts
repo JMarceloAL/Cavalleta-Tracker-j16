@@ -6,6 +6,18 @@ export const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F5F7F2',
     },
+    topBar: {
+        paddingHorizontal: 20,
+        paddingTop: 12,
+        paddingBottom: 8,
+    },
+    menuButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     darkContainer: {
         backgroundColor: '#121821',
     },

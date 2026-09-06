@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-type ThemeMode = 'light' | 'dark';
+import { APP_THEMES, syncThemeToAppColors, type AppThemeName } from '../theme/colors';
 
 type ThemeColors = {
     primary: string;
@@ -17,47 +16,22 @@ type ThemeColors = {
     header: string;
 };
 
-const lightColors: ThemeColors = {
-    primary: 'rgb(163, 204, 127)',
-    background: '#F5F7F2',
-    backgroundAlt: '#f5f5f5',
-    surface: '#FFFFFF',
-    surfaceAlt: '#f9fafb',
-    text: '#111827',
-    textMuted: '#6b7280',
-    border: '#E5E7EB',
-    input: '#F9FAFB',
-    buttonText: '#FFFFFF',
-    header: '#FFFFFF',
-};
-
-const darkColors: ThemeColors = {
-    primary: 'rgb(163, 204, 127)',
-    background: '#121821',
-    backgroundAlt: '#18212d',
-    surface: '#1d2733',
-    surfaceAlt: '#243041',
-    text: '#F3F4F6',
-    textMuted: '#AFB9C7',
-    border: '#2E3B4D',
-    input: '#1B2430',
-    buttonText: '#FFFFFF',
-    header: '#1A2330',
-};
-
 const THEME_KEY = '@cavalleta:themeMode';
 
 type ThemeContextType = {
     isDark: boolean;
+    isReady: boolean;
+    activeTheme: AppThemeName;
     colors: ThemeColors;
     toggleTheme: (value?: boolean) => Promise<void>;
-    setTheme: (mode: ThemeMode) => Promise<void>;
+    setTheme: (mode: AppThemeName) => Promise<void>;
 };
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [isDark, setIsDark] = useState(false);
+    const [activeTheme, setActiveTheme] = useState<AppThemeName>('light');
+    const [isReady, setIsReady] = useState(false);
 
     useEffect(() => {
         let active = true;
@@ -65,21 +39,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem(THEME_KEY)
             .then((value) => {
                 if (!active) return;
-                setIsDark(value === 'dark');
+                const nextTheme = (value as AppThemeName) || 'light';
+                setActiveTheme(nextTheme in APP_THEMES ? nextTheme : 'light');
             })
-            .catch(() => undefined);
+            .catch(() => undefined)
+            .finally(() => {
+                if (active) setIsReady(true);
+            });
 
         return () => {
             active = false;
         };
     }, []);
 
-    const colors = isDark ? darkColors : lightColors;
+    const isDark = activeTheme === 'dark' || activeTheme === 'cyberpunk';
+    const colors = APP_THEMES[activeTheme].colors;
 
-    const setTheme = async (mode: ThemeMode) => {
-        const next = mode === 'dark';
-        setIsDark(next);
-        await AsyncStorage.setItem(THEME_KEY, next ? 'dark' : 'light');
+    useEffect(() => {
+        syncThemeToAppColors(activeTheme);
+    }, [activeTheme]);
+
+    const setTheme = async (mode: AppThemeName) => {
+        setActiveTheme(mode);
+        await AsyncStorage.setItem(THEME_KEY, mode);
     };
 
     const toggleTheme = async (value?: boolean) => {
@@ -89,10 +71,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const value = useMemo<ThemeContextType>(() => ({
         isDark,
+        isReady,
+        activeTheme,
         colors,
         toggleTheme,
         setTheme,
-    }), [isDark, colors]);
+    }), [isDark, isReady, activeTheme, colors]);
 
     return (
         <ThemeContext.Provider value={value}>

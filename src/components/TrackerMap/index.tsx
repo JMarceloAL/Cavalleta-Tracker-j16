@@ -27,6 +27,8 @@ import {
     useTheme,
 } from '../../contexts/ThemeContext';
 
+import { APP_GREEN } from '../../theme/colors';
+
 import {
     styles,
 } from './styles';
@@ -106,6 +108,9 @@ const TrackerMap = forwardRef<TrackerMapHandle, Props>(
 
         const lastFittedRouteKey =
             useRef<string | null>(null);
+
+        const userInteractionRef =
+            useRef(false);
 
         /**
          * Coordenadas atuais do tracker.
@@ -394,6 +399,8 @@ const TrackerMap = forwardRef<TrackerMapHandle, Props>(
             ref,
             () => ({
                 centerOnTracker: () => {
+                    userInteractionRef.current = false;
+
                     /**
                      * Rota histórica.
                      */
@@ -579,6 +586,10 @@ const TrackerMap = forwardRef<TrackerMapHandle, Props>(
                 return;
             }
 
+            if (userInteractionRef.current) {
+                return;
+            }
+
             cameraRef.current?.easeTo({
                 center:
                     lngLat,
@@ -599,12 +610,11 @@ const TrackerMap = forwardRef<TrackerMapHandle, Props>(
             event: any
         ) {
             const isUserInteraction =
-                event?.properties
-                    ?.isUserInteraction;
+                event?.properties?.isUserInteraction === true ||
+                event?.properties?.isGesture === true;
 
-            if (
-                isUserInteraction
-            ) {
+            if (isUserInteraction) {
+                userInteractionRef.current = true;
                 onUserPanned?.();
             }
         }
@@ -681,7 +691,7 @@ const TrackerMap = forwardRef<TrackerMapHandle, Props>(
                                 paint={{
                                     'line-color':
                                         isDark
-                                            ? '#A3CC7F'
+                                            ? APP_GREEN
                                             : '#1E90FF',
 
                                     'line-width':

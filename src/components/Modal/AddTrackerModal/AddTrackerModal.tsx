@@ -13,6 +13,7 @@ import {
 import { styles } from './styles';
 import { normalizeToE164 } from '../../../utils/phone';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { APP_GREEN } from '../../../theme/colors';
 
 interface Props {
 
@@ -54,7 +55,7 @@ export default function AddTrackerModal({
 
 }: Props) {
 
-    const { isDark } = useTheme();
+    const { isDark, colors } = useTheme();
     const [name, setName] = useState(initialName);
     const [phone, setPhone] = useState(initialPhone);
     const [loading, setLoading] = useState(false);
@@ -128,7 +129,7 @@ export default function AddTrackerModal({
                 <View style={containerStyle}>
                     {loading ? (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color={isDark ? '#F3F4F6' : 'rgb(163, 204, 127)'} />
+                            <ActivityIndicator size="large" color={isDark ? '#F3F4F6' : colors.primary} />
                             <Text style={[styles.loadingText, isDark && styles.darkLoadingText]}>
                                 Conectando ao rastreador...
                             </Text>
@@ -170,7 +171,7 @@ export default function AddTrackerModal({
                                 </View>
                             )}
 
-                            <TouchableOpacity style={styles.primaryButton} onPress={handleAdd} disabled={loading}>
+                            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colors.primary }]} onPress={handleAdd} disabled={loading}>
                                 <Text style={styles.primaryButtonText}>{submitLabel}</Text>
                             </TouchableOpacity>
 
